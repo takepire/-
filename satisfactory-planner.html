@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Satisfactory 工場プランナー</title>
+<style>
+:root{--bg:#1a1c20;--panel:#25282e;--panel2:#2d3138;--border:#3a3f47;--fg:#e8e6e3;--dim:#9aa0a8;--acc:#fa9549;--acc2:#e06c00;--ok:#7ec97e;--warn:#e0b050;--bad:#e07070;--blue:#6db3e8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;font-size:14px;line-height:1.5;padding-bottom:60px}
+.wrap{max-width:820px;margin:0 auto;padding:10px}
+h1{font-size:18px;color:var(--acc);padding:8px 0 2px}
+h1 small{color:var(--dim);font-weight:normal;font-size:11px;margin-left:8px}
+.tabs{display:flex;gap:6px;margin:10px 0}
+.tab{flex:1;padding:10px 4px;text-align:center;background:var(--panel);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;user-select:none}
+.tab.on{background:var(--acc2);border-color:var(--acc);color:#fff;font-weight:bold}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.row:last-child{margin-bottom:0}
+label{font-size:12px;color:var(--dim)}
+.fld{display:flex;flex-direction:column;gap:3px;flex:1;min-width:130px}
+input,select,button{font:inherit;background:var(--panel2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;width:100%}
+input[type=number]{-moz-appearance:textfield}
+select{appearance:auto}
+button{cursor:pointer;background:var(--acc2);border-color:var(--acc);color:#fff;font-weight:bold;width:auto;padding:8px 16px}
+button.ghost{background:var(--panel2);color:var(--fg);border-color:var(--border);font-weight:normal}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
+.card .v{font-size:19px;font-weight:bold;color:var(--acc)}
+.card .t{font-size:11px;color:var(--dim)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 6px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{color:var(--dim);font-weight:normal;font-size:11px;white-space:nowrap}
+td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.iname{font-weight:bold}
+.iname small{color:var(--dim);font-weight:normal;display:block;font-size:10px}
+.mch{color:var(--blue);white-space:nowrap}
+.belt{font-size:11px;color:var(--dim);white-space:nowrap}
+.rsel{max-width:230px;font-size:12px;padding:5px;margin-top:3px}
+.ocin{width:58px;padding:3px 4px;font-size:12px;text-align:right}
+.ocin.ov{border-color:var(--warn);color:var(--warn)}
+.alt{color:var(--warn)}
+details.tn{margin:2px 0 2px 0;border-left:2px solid var(--border);padding-left:10px}
+details.tn>summary{cursor:pointer;list-style:none;padding:5px 6px;background:var(--panel2);border:1px solid var(--border);border-radius:6px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+details.tn>summary::before{content:"▸";color:var(--acc);margin-right:2px}
+details[open].tn>summary::before{content:"▾"}
+details.tn>summary.leafy{cursor:default}
+details.tn>summary.leafy::before{content:"●";font-size:8px;color:var(--ok)}
+.sm-rate{color:var(--acc);font-weight:bold;white-space:nowrap}
+.sm-mc{color:var(--blue);font-size:12px;white-space:nowrap}
+.sm-rc{color:var(--dim);font-size:11px}
+.rawtag{color:var(--ok);font-size:11px;border:1px solid var(--ok);border-radius:4px;padding:0 4px}
+.cyc{color:var(--bad);font-size:11px}
+.byp{color:var(--warn)}
+.note{font-size:11px;color:var(--dim);margin-top:6px}
+.err{color:var(--bad);padding:8px;font-size:13px}
+.savebar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.savebar input{flex:1;min-width:120px;width:auto}
+.slist{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.slist .si{display:flex;gap:6px;align-items:center;background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:6px 8px}
+.slist .si span{flex:1}
+.slist button{padding:4px 10px;font-size:12px}
+h2{font-size:14px;color:var(--acc);margin:14px 0 6px}
+.chip{display:inline-block;background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:2px 10px;margin:2px;font-size:12px}
+.chip.bneck{border-color:var(--bad);color:var(--bad)}
+.noderow{display:grid;grid-template-columns:1.2fr 1.4fr .9fr 64px 58px 34px;gap:5px;align-items:end;margin-bottom:6px}
+.noderow select,.noderow input{padding:6px 4px;font-size:12px}
+.noderow .del{background:var(--panel2);border:1px solid var(--border);color:var(--bad);border-radius:6px;padding:6px 0;font-weight:bold}
+.nlab{font-size:10px;color:var(--dim);display:block;margin-bottom:2px}
+@media(max-width:540px){.noderow{grid-template-columns:1.2fr 1.3fr .9fr 56px 50px 30px}}
+#toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--acc2);color:#fff;padding:8px 18px;border-radius:20px;display:none;z-index:9}
+@media(max-width:480px){body{font-size:13px} td,th{padding:6px 4px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Satisfactory 工場プランナー <small>v1.1 (ゲームVer1.0対応 / 全276レシピ)</small></h1>
+
+<div class="tabs">
+  <div class="tab on" id="tabT" onclick="setMode('target')">🎯 目標から逆算</div>
+  <div class="tab" id="tabR" onclick="setMode('resource')">⛏️ 資源から順算</div>
+</div>
+
+<div class="panel" id="pnlTarget">
+  <div class="row">
+    <div class="fld"><label>作りたいアイテム</label><input id="tItem" list="itemList" placeholder="例: モジュラー・フレーム" autocomplete="off"></div>
+    <div class="fld" style="max-width:120px"><label>目標生産数 /分</label><input id="tRate" type="number" value="10" min="0.1" step="any"></div>
+  </div>
+</div>
+
+<div class="panel" id="pnlRes" style="display:none">
+  <div class="row"><div class="fld"><label>作りたいアイテム(制約内で最大生産)</label><input id="rItem" list="itemList" placeholder="例: モジュラー・フレーム" autocomplete="off"></div></div>
+  <label style="margin-bottom:4px;display:block">使用する資源ノード(複数可・合計供給量が制約になります)</label>
+  <div id="nodeList"></div>
+  <button class="ghost" onclick="addNode()" style="font-size:12px;padding:6px 12px">＋ 資源ノードを追加</button>
+  <div class="note" id="rSupply"></div>
+  <div class="note">※ここに追加した資源だけが制約になります。追加していない資源は無制限として扱います。</div>
+</div>
+
+<div class="panel">
+  <div class="row">
+    <div class="fld" style="max-width:170px"><label>生産設備の基本OC % (全体)</label><input id="pOC" type="number" value="100" min="1" max="250"></div>
+    <div class="fld" style="max-width:210px"><label><input type="checkbox" id="bypCredit" checked style="width:auto;margin-right:5px">副産物を材料に充当する</label></div>
+  </div>
+  <div class="note">※工程ごとの個別OCは下の「生産工程」表で設定できます(<span class="alt">黄色</span>=個別指定中)。電力は クロック^1.321929 でスケール。</div>
+</div>
+
+<div id="out"></div>
+
+<h2>💾 設計の保存・共有</h2>
+<div class="panel">
+  <div class="savebar"><input id="saveName" placeholder="設計名"><button onclick="saveDesign()">保存</button><button class="ghost" onclick="shareURL()">共有URLコピー</button></div>
+  <div class="slist" id="saveList"></div>
+</div>
+<div class="note">データ出典: Satisfactory 1.0 (greeny/SatisfactoryTools)。数値は毎分換算。</div>
+</div>
+<datalist id="itemList"></datalist>
+<div id="toast"></div>
+
+<script>
+const D = {"items":[{"n":"Iron Ore","j":"鉄鉱石","l":false,"e":0},{"n":"Coal","j":"石炭","l":false,"e":300},{"n":"Water","j":"水","l":true,"e":0},{"n":"Nitrogen Gas","j":"窒素ガス","l":true,"e":0},{"n":"Sulfur","j":"硫黄","l":false,"e":0},{"n":"SAM","j":"SAM","l":false,"e":0},{"n":"Bauxite","j":"ボーキサイト","l":false,"e":0},{"n":"Caterium Ore","j":"カテリウム鉱石","l":false,"e":0},{"n":"Copper Ore","j":"銅鉱石","l":false,"e":0},{"n":"Raw Quartz","j":"未加工石英","l":false,"e":0},{"n":"Limestone","j":"石灰岩","l":false,"e":0},{"n":"Uranium","j":"ウラン","l":false,"e":0},{"n":"Crude Oil","j":"原油","l":true,"e":320},{"n":"Iron Ingot","j":"鉄のインゴット","l":false,"e":0},{"n":"Iron Plate","j":"鉄板","l":false,"e":0},{"n":"Iron Rod","j":"鉄のロッド","l":false,"e":0},{"n":"Fuel","j":"燃料","l":true,"e":750},{"n":"Rocket Fuel","j":"ロケット燃料","l":true,"e":3600},{"n":"Compacted Coal","j":"圧縮石炭","l":false,"e":630},{"n":"Turbofuel","j":"ターボ燃料","l":true,"e":2000},{"n":"Nitric Acid","j":"硝酸","l":true,"e":0},{"n":"Empty Fluid Tank","j":"空の液体タンク","l":false,"e":0},{"n":"Packaged Rocket Fuel","j":"梱包ロケット燃料","l":false,"e":7200},{"n":"Dark Matter Crystal","j":"ダークマター結晶","l":false,"e":0},{"n":"Ionized Fuel","j":"イオン化燃料","l":true,"e":5000},{"n":"Reanimated SAM","j":"再活性化SAM","l":false,"e":0},{"n":"Dark Matter Residue","j":"ダークマター残渣","l":true,"e":0},{"n":"Excited Photonic Matter","j":"励起フォトニック物質","l":true,"e":0},{"n":"Diamonds","j":"ダイヤモンド","l":false,"e":0},{"n":"Crystal Oscillator","j":"水晶発振器","l":false,"e":0},{"n":"Alclad Aluminum Sheet","j":"アルクラッド・アルミシート","l":false,"e":0},{"n":"Superposition Oscillator","j":"重ね合わせ発振器","l":false,"e":0},{"n":"Time Crystal","j":"時間結晶","l":false,"e":0},{"n":"Supercomputer","j":"スーパーコンピューター","l":false,"e":0},{"n":"Ficsite Trigon","j":"フィクサイト・トライゴン","l":false,"e":0},{"n":"Neural-Quantum Processor","j":"ニューラル量子プロセッサー","l":false,"e":0},{"n":"Magnetic Field Generator","j":"磁場発生装置","l":false,"e":0},{"n":"AI Expansion Server","j":"AI拡張サーバー","l":false,"e":0},{"n":"Power Shard","j":"パワー・シャード","l":false,"e":0},{"n":"Packaged Ionized Fuel","j":"梱包イオン化燃料","l":false,"e":10000},{"n":"Packaged Turbofuel","j":"梱包ターボ燃料","l":false,"e":2000},{"n":"Wire","j":"ワイヤー","l":false,"e":0},{"n":"Steel Pipe","j":"鋼管","l":false,"e":0},{"n":"SAM Fluctuator","j":"SAMフラクチュエーター","l":false,"e":0},{"n":"Ficsite Ingot","j":"フィクサイトのインゴット","l":false,"e":0},{"n":"Assembly Director System","j":"組立指揮システム","l":false,"e":0},{"n":"Biochemical Sculptor","j":"生化学スカルプター","l":false,"e":0},{"n":"Aluminum Ingot","j":"アルミのインゴット","l":false,"e":0},{"n":"Caterium Ingot","j":"カテリウムのインゴット","l":false,"e":0},{"n":"Empty Canister","j":"空の容器","l":false,"e":0},{"n":"Wood","j":"木","l":false,"e":100},{"n":"Biomass","j":"バイオマス","l":false,"e":180},{"n":"Copper Sheet","j":"銅板","l":false,"e":0},{"n":"Plastic","j":"プラスチック","l":false,"e":0},{"n":"Circuit Board","j":"回路基板","l":false,"e":0},{"n":"Polymer Resin","j":"ポリマー樹脂","l":false,"e":0},{"n":"Heavy Oil Residue","j":"廃重油","l":true,"e":400},{"n":"Petroleum Coke","j":"石油コークス","l":false,"e":180},{"n":"Rubber","j":"ゴム","l":false,"e":0},{"n":"Quartz Crystal","j":"石英結晶","l":false,"e":0},{"n":"Concrete","j":"コンクリート","l":false,"e":0},{"n":"Steel Ingot","j":"鋼鉄のインゴット","l":false,"e":0},{"n":"Steel Beam","j":"鋼梁","l":false,"e":0},{"n":"Modular Frame","j":"モジュラー・フレーム","l":false,"e":0},{"n":"Versatile Framework","j":"多目的フレームワーク","l":false,"e":0},{"n":"Packaged Fuel","j":"梱包燃料","l":false,"e":750},{"n":"Solid Biofuel","j":"固形バイオ燃料","l":false,"e":450},{"n":"Liquid Biofuel","j":"液体バイオ燃料","l":true,"e":750},{"n":"Packaged Liquid Biofuel","j":"梱包液体バイオ燃料","l":false,"e":750},{"n":"Packaged Oil","j":"梱包原油","l":false,"e":320},{"n":"Packaged Heavy Oil Residue","j":"梱包廃重油","l":false,"e":400},{"n":"Packaged Water","j":"梱包水","l":false,"e":0},{"n":"Copper Ingot","j":"銅のインゴット","l":false,"e":0},{"n":"Aluminum Scrap","j":"アルミのスクラップ","l":false,"e":0},{"n":"Aluminum Casing","j":"アルミの筐体","l":false,"e":0},{"n":"Alumina Solution","j":"アルミナ溶液","l":true,"e":0},{"n":"Silica","j":"シリカ","l":false,"e":0},{"n":"Packaged Alumina Solution","j":"梱包アルミナ溶液","l":false,"e":0},{"n":"Cable","j":"ケーブル","l":false,"e":0},{"n":"Reinforced Iron Plate","j":"強化鉄板","l":false,"e":0},{"n":"Rotor","j":"ローター","l":false,"e":0},{"n":"Smart Plating","j":"スマート・プレート","l":false,"e":0},{"n":"Stator","j":"ステーター","l":false,"e":0},{"n":"High-Speed Connector","j":"高速コネクター","l":false,"e":0},{"n":"Automated Wiring","j":"自動ワイヤー","l":false,"e":0},{"n":"Encased Industrial Beam","j":"鋼骨コンクリート梁","l":false,"e":0},{"n":"Motor","j":"モーター","l":false,"e":0},{"n":"Quickwire","j":"クイックワイヤー","l":false,"e":0},{"n":"AI Limiter","j":"AIリミッター","l":false,"e":0},{"n":"Screw","j":"ネジ","l":false,"e":0},{"n":"Heavy Modular Frame","j":"ヘビー・モジュラー・フレーム","l":false,"e":0},{"n":"Computer","j":"コンピューター","l":false,"e":0},{"n":"Modular Engine","j":"モジュラー・エンジン","l":false,"e":0},{"n":"Adaptive Control Unit","j":"適応制御ユニット","l":false,"e":0},{"n":"Pressure Conversion Cube","j":"圧力変換キューブ","l":false,"e":0},{"n":"Packaged Nitrogen Gas","j":"梱包窒素ガス","l":false,"e":0},{"n":"Turbo Motor","j":"ターボ・モーター","l":false,"e":0},{"n":"Plutonium Pellet","j":"プルトニウム・ペレット","l":false,"e":0},{"n":"Encased Plutonium Cell","j":"被覆プルトニウム・セル","l":false,"e":0},{"n":"Fused Modular Frame","j":"溶融モジュラー・フレーム","l":false,"e":0},{"n":"Radio Control Unit","j":"無線制御ユニット","l":false,"e":0},{"n":"Uranium Waste","j":"ウラン廃棄物","l":false,"e":0},{"n":"Sulfuric Acid","j":"硫酸","l":true,"e":0},{"n":"Non-Fissile Uranium","j":"非核分裂性ウラン","l":false,"e":0},{"n":"Copper Powder","j":"銅粉","l":false,"e":0},{"n":"Electromagnetic Control Rod","j":"電磁制御棒","l":false,"e":0},{"n":"Heat Sink","j":"ヒートシンク","l":false,"e":0},{"n":"Plutonium Fuel Rod","j":"プルトニウム燃料棒","l":false,"e":1500000},{"n":"Packaged Nitric Acid","j":"梱包硝酸","l":false,"e":0},{"n":"Nuclear Pasta","j":"核パスタ","l":false,"e":0},{"n":"Encased Uranium Cell","j":"被覆ウラン・セル","l":false,"e":0},{"n":"Cooling System","j":"冷却システム","l":false,"e":0},{"n":"Battery","j":"バッテリー","l":false,"e":6000},{"n":"Packaged Sulfuric Acid","j":"梱包硫酸","l":false,"e":0},{"n":"Uranium Fuel Rod","j":"ウラン燃料棒","l":false,"e":750000},{"n":"Portable Miner","j":"Portable Miner","l":false,"e":0},{"n":"Dissolved Silica","j":"溶解シリカ","l":true,"e":0},{"n":"Thermal Propulsion Rocket","j":"熱推進ロケット","l":false,"e":0},{"n":"Black Powder","j":"黒色火薬","l":false,"e":0},{"n":"Plutonium Waste","j":"プルトニウム廃棄物","l":false,"e":0},{"n":"Singularity Cell","j":"特異点セル","l":false,"e":0},{"n":"Ficsonium","j":"フィクソニウム","l":false,"e":0},{"n":"Ficsonium Fuel Rod","j":"フィクソニウム燃料棒","l":false,"e":150000},{"n":"Ballistic Warp Drive","j":"弾道ワープドライブ","l":false,"e":0},{"n":"Gas Filter","j":"ガスフィルター","l":false,"e":0},{"n":"Iodine-Infused Filter","j":"ヨウ素注入フィルター","l":false,"e":0},{"n":"Hog Remains","j":"ホッグの残骸","l":false,"e":0},{"n":"Alien Protein","j":"エイリアン・プロテイン","l":false,"e":0},{"n":"Spitter Remains","j":"スピッターの残骸","l":false,"e":0},{"n":"Mycelia","j":"菌糸","l":false,"e":20},{"n":"Blue Power Slug","j":"青のパワー・スラッグ","l":false,"e":0},{"n":"Alien Power Matrix","j":"エイリアン・パワー・マトリックス","l":false,"e":0},{"n":"Stinger Remains","j":"スティンガーの残骸","l":false,"e":0},{"n":"Hatcher Remains","j":"ハッチャーの残骸","l":false,"e":0},{"n":"Alien DNA Capsule","j":"エイリアンDNAカプセル","l":false,"e":0},{"n":"Iron Rebar","j":"鉄の尖筋","l":false,"e":0},{"n":"Rifle Ammo","j":"ライフル弾","l":false,"e":0},{"n":"Homing Rifle Ammo","j":"追尾ライフル弾","l":false,"e":0},{"n":"Stun Rebar","j":"スタン尖筋","l":false,"e":0},{"n":"Fabric","j":"布","l":false,"e":0},{"n":"Nobelisk","j":"ノーベリスク","l":false,"e":0},{"n":"Gas Nobelisk","j":"ガス・ノーベリスク","l":false,"e":0},{"n":"Purple Power Slug","j":"紫のパワー・スラッグ","l":false,"e":0},{"n":"Yellow Power Slug","j":"黄のパワー・スラッグ","l":false,"e":0},{"n":"Pulse Nobelisk","j":"パルス・ノーベリスク","l":false,"e":0},{"n":"Shatter Rebar","j":"粉砕尖筋","l":false,"e":0},{"n":"Turbo Rifle Ammo","j":"ターボライフル弾","l":false,"e":0},{"n":"Smokeless Powder","j":"無煙火薬","l":false,"e":0},{"n":"Nuke Nobelisk","j":"核ノーベリスク","l":false,"e":0},{"n":"Explosive Rebar","j":"爆発尖筋","l":false,"e":0},{"n":"Cluster Nobelisk","j":"クラスター・ノーベリスク","l":false,"e":0},{"n":"Leaves","j":"葉","l":false,"e":15}],"machines":[{"n":"Constructor","j":"製造機","p":4,"x":1.321929},{"n":"Smelter","j":"製錬炉","p":4,"x":1.321929},{"n":"Blender","j":"混合機","p":75,"x":1.321929},{"n":"Packager","j":"充填機","p":10,"x":1.321929},{"n":"Converter","j":"転換機","p":0,"x":1.321929},{"n":"Particle Accelerator","j":"粒子加速器","p":0,"x":1.321929},{"n":"Quantum Encoder","j":"量子エンコーダー","p":0,"x":1.321929},{"n":"Refinery","j":"精製施設","p":30,"x":1.321929},{"n":"Manufacturer","j":"製作機","p":55,"x":1.321929},{"n":"Assembler","j":"組立機","p":15,"x":1.321929},{"n":"Foundry","j":"鋳造炉","p":16,"x":1.321929}],"recipes":[{"n":"Iron Plate","a":0,"m":0,"i":[[13,30]],"o":[[14,20]],"vp":0},{"n":"Iron Rod","a":0,"m":0,"i":[[13,15]],"o":[[15,15]],"vp":0},{"n":"Iron Ingot","a":0,"m":1,"i":[[0,30]],"o":[[13,30]],"vp":0},{"n":"Nitro Rocket Fuel","a":1,"m":2,"i":[[16,100],[3,75],[4,100],[1,50]],"o":[[17,150],[18,25]],"vp":0},{"n":"Rocket Fuel","a":0,"m":2,"i":[[19,60],[20,10]],"o":[[17,100],[18,10]],"vp":0},{"n":"Packaged Rocket Fuel","a":0,"m":3,"i":[[17,120],[21,60]],"o":[[22,60]],"vp":0},{"n":"Unpackage Rocket Fuel","a":0,"m":3,"i":[[22,60]],"o":[[17,120],[21,60]],"vp":0},{"n":"Dark-Ion Fuel","a":1,"m":4,"i":[[22,240],[23,80]],"o":[[24,200],[18,40]],"vp":250},{"n":"Dark Matter Residue","a":0,"m":4,"i":[[25,50]],"o":[[26,100]],"vp":250},{"n":"Excited Photonic Matter","a":0,"m":4,"i":[],"o":[[27,200]],"vp":250},{"n":"Dark Matter Crystal","a":0,"m":5,"i":[[28,30],[26,150]],"o":[[23,30]],"vp":1000},{"n":"Superposition Oscillator","a":0,"m":6,"i":[[23,30],[29,5],[30,45],[27,125]],"o":[[31,5],[26,125]],"vp":1000},{"n":"Neural-Quantum Processor","a":0,"m":6,"i":[[32,15],[33,3],[34,45],[27,75]],"o":[[35,3],[26,75]],"vp":1000},{"n":"AI Expansion Server","a":0,"m":6,"i":[[36,4],[35,4],[31,4],[27,100]],"o":[[37,4],[26,100]],"vp":1000},{"n":"Ionized Fuel","a":0,"m":7,"i":[[17,40],[38,2.5]],"o":[[24,40],[18,5]],"vp":0},{"n":"Packaged Ionized Fuel","a":0,"m":3,"i":[[24,80],[21,40]],"o":[[39,40]],"vp":0},{"n":"Unpackage Ionized Fuel","a":0,"m":3,"i":[[39,40]],"o":[[24,80],[21,40]],"vp":0},{"n":"Turbo Diamonds","a":1,"m":5,"i":[[1,600],[40,40]],"o":[[28,60]],"vp":500},{"n":"SAM Fluctuator","a":0,"m":8,"i":[[25,60],[41,50],[42,30]],"o":[[43,10]],"vp":0},{"n":"Ficsite Trigon","a":0,"m":0,"i":[[44,10]],"o":[[34,30]],"vp":0},{"n":"Ficsite Ingot (Iron)","a":0,"m":4,"i":[[25,40],[13,240]],"o":[[44,10]],"vp":250},{"n":"Time Crystal","a":0,"m":4,"i":[[28,12]],"o":[[32,6]],"vp":250},{"n":"Diamonds","a":0,"m":5,"i":[[1,600]],"o":[[28,30]],"vp":500},{"n":"Reanimated SAM","a":0,"m":0,"i":[[5,120]],"o":[[25,30]],"vp":0},{"n":"Biochemical Sculptor","a":0,"m":2,"i":[[45,0.5],[34,40],[2,10]],"o":[[46,2]],"vp":1000},{"n":"Ficsite Ingot (Aluminum)","a":0,"m":4,"i":[[25,60],[47,120]],"o":[[44,30]],"vp":250},{"n":"Ficsite Ingot (Caterium)","a":0,"m":4,"i":[[25,45],[48,60]],"o":[[44,15]],"vp":250},{"n":"Bauxite (Caterium)","a":0,"m":4,"i":[[25,10],[7,150]],"o":[[6,120]],"vp":250},{"n":"Bauxite (Copper)","a":0,"m":4,"i":[[25,10],[8,180]],"o":[[6,120]],"vp":250},{"n":"Caterium Ore (Copper)","a":0,"m":4,"i":[[25,10],[8,150]],"o":[[7,120]],"vp":250},{"n":"Caterium Ore (Quartz)","a":0,"m":4,"i":[[25,10],[9,120]],"o":[[7,120]],"vp":250},{"n":"Coal (Iron)","a":0,"m":4,"i":[[25,10],[0,180]],"o":[[1,120]],"vp":250},{"n":"Coal (Limestone)","a":0,"m":4,"i":[[25,10],[10,360]],"o":[[1,120]],"vp":250},{"n":"Copper Ore (Quartz)","a":0,"m":4,"i":[[25,10],[9,100]],"o":[[8,120]],"vp":250},{"n":"Copper Ore (Sulfur)","a":0,"m":4,"i":[[25,10],[4,120]],"o":[[8,120]],"vp":250},{"n":"Iron Ore (Limestone)","a":0,"m":4,"i":[[25,10],[10,240]],"o":[[0,120]],"vp":250},{"n":"Limestone (Sulfur)","a":0,"m":4,"i":[[25,10],[4,20]],"o":[[10,120]],"vp":250},{"n":"Nitrogen Gas (Bauxite)","a":0,"m":4,"i":[[25,10],[6,100]],"o":[[3,120]],"vp":250},{"n":"Nitrogen Gas (Caterium)","a":0,"m":4,"i":[[25,10],[7,120]],"o":[[3,120]],"vp":250},{"n":"Raw Quartz (Bauxite)","a":0,"m":4,"i":[[25,10],[6,100]],"o":[[9,120]],"vp":250},{"n":"Raw Quartz (Coal)","a":0,"m":4,"i":[[25,10],[1,240]],"o":[[9,120]],"vp":250},{"n":"Sulfur (Coal)","a":0,"m":4,"i":[[25,10],[1,200]],"o":[[4,120]],"vp":250},{"n":"Sulfur (Iron)","a":0,"m":4,"i":[[25,10],[0,300]],"o":[[4,120]],"vp":250},{"n":"Uranium Ore (Bauxite)","a":0,"m":4,"i":[[25,10],[6,480]],"o":[[11,120]],"vp":250},{"n":"Turbofuel","a":1,"m":7,"i":[[16,22.5],[18,15]],"o":[[19,18.75]],"vp":0},{"n":"Packaged Turbofuel","a":0,"m":3,"i":[[19,20],[49,20]],"o":[[40,20]],"vp":0},{"n":"Unpackage Turbofuel","a":0,"m":3,"i":[[40,20]],"o":[[19,20],[49,20]],"vp":0},{"n":"Charcoal","a":1,"m":0,"i":[[50,15]],"o":[[1,150]],"vp":0},{"n":"Biocoal","a":1,"m":0,"i":[[51,37.5]],"o":[[1,45]],"vp":0},{"n":"Compacted Coal","a":1,"m":9,"i":[[1,25],[4,25]],"o":[[18,25]],"vp":0},{"n":"Circuit Board","a":0,"m":9,"i":[[52,15],[53,30]],"o":[[54,7.5]],"vp":0},{"n":"Fuel","a":0,"m":7,"i":[[12,60]],"o":[[16,40],[55,30]],"vp":0},{"n":"Petroleum Coke","a":0,"m":7,"i":[[56,40]],"o":[[57,120]],"vp":0},{"n":"Plastic","a":0,"m":7,"i":[[12,30]],"o":[[53,20],[56,10]],"vp":0},{"n":"Rubber","a":0,"m":7,"i":[[12,30]],"o":[[58,20],[56,20]],"vp":0},{"n":"Residual Fuel","a":0,"m":7,"i":[[56,60]],"o":[[16,40]],"vp":0},{"n":"Residual Plastic","a":0,"m":7,"i":[[55,60],[2,20]],"o":[[53,20]],"vp":0},{"n":"Residual Rubber","a":0,"m":7,"i":[[55,40],[2,40]],"o":[[58,20]],"vp":0},{"n":"Pink Diamonds","a":1,"m":4,"i":[[1,120],[59,45]],"o":[[28,15]],"vp":250},{"n":"Petroleum Diamonds","a":1,"m":5,"i":[[57,720]],"o":[[28,30]],"vp":500},{"n":"Oil-Based Diamonds","a":1,"m":5,"i":[[12,200]],"o":[[28,40]],"vp":500},{"n":"Cloudy Diamonds","a":1,"m":5,"i":[[1,240],[10,480]],"o":[[28,20]],"vp":500},{"n":"Dark Matter Trap","a":1,"m":5,"i":[[32,30],[26,150]],"o":[[23,60]],"vp":1000},{"n":"Dark Matter Crystallization","a":1,"m":5,"i":[[26,200]],"o":[[23,20]],"vp":1000},{"n":"Wet Concrete","a":1,"m":7,"i":[[10,120],[2,100]],"o":[[60,80]],"vp":0},{"n":"Turbo Heavy Fuel","a":1,"m":7,"i":[[56,37.5],[18,30]],"o":[[19,30]],"vp":0},{"n":"Steel Rod","a":1,"m":0,"i":[[61,12]],"o":[[15,48]],"vp":0},{"n":"Steel Beam","a":0,"m":0,"i":[[61,60]],"o":[[62,15]],"vp":0},{"n":"Steel Pipe","a":0,"m":0,"i":[[61,30]],"o":[[42,20]],"vp":0},{"n":"Steel Ingot","a":0,"m":10,"i":[[0,45],[1,45]],"o":[[61,45]],"vp":0},{"n":"Versatile Framework","a":0,"m":9,"i":[[63,2.5],[62,30]],"o":[[64,5]],"vp":0},{"n":"Steel Canister","a":1,"m":0,"i":[[61,40]],"o":[[49,40]],"vp":0},{"n":"Empty Canister","a":0,"m":0,"i":[[53,30]],"o":[[49,60]],"vp":0},{"n":"Packaged Fuel","a":0,"m":3,"i":[[16,40],[49,40]],"o":[[65,40]],"vp":0},{"n":"Liquid Biofuel","a":0,"m":7,"i":[[66,90],[2,45]],"o":[[67,60]],"vp":0},{"n":"Packaged Liquid Biofuel","a":0,"m":3,"i":[[67,40],[49,40]],"o":[[68,40]],"vp":0},{"n":"Packaged Oil","a":0,"m":3,"i":[[12,30],[49,30]],"o":[[69,30]],"vp":0},{"n":"Packaged Heavy Oil Residue","a":0,"m":3,"i":[[56,30],[49,30]],"o":[[70,30]],"vp":0},{"n":"Packaged Water","a":0,"m":3,"i":[[2,60],[49,60]],"o":[[71,60]],"vp":0},{"n":"Unpackage Liquid Biofuel","a":0,"m":3,"i":[[68,60]],"o":[[67,60],[49,60]],"vp":0},{"n":"Unpackage Fuel","a":0,"m":3,"i":[[65,60]],"o":[[16,60],[49,60]],"vp":0},{"n":"Unpackage Oil","a":0,"m":3,"i":[[69,60]],"o":[[12,60],[49,60]],"vp":0},{"n":"Unpackage Heavy Oil Residue","a":0,"m":3,"i":[[70,20]],"o":[[56,20],[49,20]],"vp":0},{"n":"Unpackage Water","a":0,"m":3,"i":[[71,120]],"o":[[2,120],[49,120]],"vp":0},{"n":"Steamed Copper Sheet","a":1,"m":7,"i":[[72,22.5],[2,22.5]],"o":[[52,22.5]],"vp":0},{"n":"Rubber Concrete","a":1,"m":9,"i":[[10,100],[58,20]],"o":[[60,90]],"vp":0},{"n":"Recycled Rubber","a":1,"m":7,"i":[[53,30],[16,30]],"o":[[58,60]],"vp":0},{"n":"Pure Quartz Crystal","a":1,"m":7,"i":[[9,67.5],[2,37.5]],"o":[[59,52.5]],"vp":0},{"n":"Quartz Crystal","a":0,"m":0,"i":[[9,37.5]],"o":[[59,22.5]],"vp":0},{"n":"Pure Iron Ingot","a":1,"m":7,"i":[[0,35],[2,20]],"o":[[13,65]],"vp":0},{"n":"Pure Copper Ingot","a":1,"m":7,"i":[[8,15],[2,10]],"o":[[72,37.5]],"vp":0},{"n":"Pure Caterium Ingot","a":1,"m":7,"i":[[7,24],[2,24]],"o":[[48,12]],"vp":0},{"n":"Pure Aluminum Ingot","a":1,"m":1,"i":[[73,60]],"o":[[47,30]],"vp":0},{"n":"Aluminum Casing","a":0,"m":0,"i":[[47,90]],"o":[[74,60]],"vp":0},{"n":"Alclad Aluminum Sheet","a":0,"m":9,"i":[[47,30],[72,10]],"o":[[30,30]],"vp":0},{"n":"Alumina Solution","a":0,"m":7,"i":[[6,120],[2,180]],"o":[[75,120],[76,50]],"vp":0},{"n":"Aluminum Scrap","a":0,"m":7,"i":[[75,240],[1,120]],"o":[[73,360],[2,120]],"vp":0},{"n":"Packaged Alumina Solution","a":0,"m":3,"i":[[75,120],[49,120]],"o":[[77,120]],"vp":0},{"n":"Aluminum Ingot","a":0,"m":10,"i":[[73,90],[76,75]],"o":[[47,60]],"vp":0},{"n":"Silica","a":0,"m":0,"i":[[9,22.5]],"o":[[76,37.5]],"vp":0},{"n":"Crystal Oscillator","a":0,"m":8,"i":[[59,18],[78,14],[79,2.5]],"o":[[29,1]],"vp":0},{"n":"Unpackage Alumina Solution","a":0,"m":3,"i":[[77,120]],"o":[[75,120],[49,120]],"vp":0},{"n":"Polymer Resin","a":1,"m":7,"i":[[12,60]],"o":[[55,130],[56,20]],"vp":0},{"n":"Plastic Smart Plating","a":1,"m":8,"i":[[79,2.5],[80,2.5],[53,7.5]],"o":[[81,5]],"vp":0},{"n":"Automated Speed Wiring","a":1,"m":8,"i":[[82,3.75],[41,75],[83,1.875]],"o":[[84,7.5]],"vp":0},{"n":"Encased Industrial Beam","a":0,"m":9,"i":[[62,18],[60,36]],"o":[[85,6]],"vp":0},{"n":"Motor","a":0,"m":9,"i":[[80,10],[82,10]],"o":[[86,5]],"vp":0},{"n":"Stator","a":0,"m":9,"i":[[42,15],[41,40]],"o":[[82,5]],"vp":0},{"n":"Automated Wiring","a":0,"m":9,"i":[[82,2.5],[78,50]],"o":[[84,2.5]],"vp":0},{"n":"AI Limiter","a":0,"m":9,"i":[[52,25],[87,100]],"o":[[88,5]],"vp":0},{"n":"Heavy Oil Residue","a":1,"m":7,"i":[[12,30]],"o":[[56,40],[55,20]],"vp":0},{"n":"Heavy Flexible Frame","a":1,"m":8,"i":[[63,18.75],[85,11.25],[58,75],[89,390]],"o":[[90,3.75]],"vp":0},{"n":"Computer","a":0,"m":8,"i":[[54,10],[78,20],[53,40]],"o":[[91,2.5]],"vp":0},{"n":"Heavy Modular Frame","a":0,"m":8,"i":[[63,10],[42,40],[85,10],[89,240]],"o":[[90,2]],"vp":0},{"n":"Modular Engine","a":0,"m":8,"i":[[86,2],[58,15],[81,2]],"o":[[92,1]],"vp":0},{"n":"Adaptive Control Unit","a":0,"m":8,"i":[[84,5],[54,5],[90,1],[91,2]],"o":[[93,1]],"vp":0},{"n":"Fused Wire","a":1,"m":9,"i":[[72,12],[48,3]],"o":[[41,90]],"vp":0},{"n":"Flexible Framework","a":1,"m":8,"i":[[63,3.75],[62,22.5],[58,30]],"o":[[64,7.5]],"vp":0},{"n":"Electrode Circuit Board","a":1,"m":9,"i":[[58,20],[57,40]],"o":[[54,5]],"vp":0},{"n":"Electrode Aluminum Scrap","a":1,"m":7,"i":[[75,180],[57,60]],"o":[[73,300],[2,105]],"vp":0},{"n":"Diluted Packaged Fuel","a":1,"m":7,"i":[[56,30],[71,60]],"o":[[65,60]],"vp":0},{"n":"Copper Rotor","a":1,"m":9,"i":[[52,22.5],[89,195]],"o":[[80,11.25]],"vp":0},{"n":"Modular Frame","a":0,"m":9,"i":[[79,3],[15,12]],"o":[[63,2]],"vp":0},{"n":"Rotor","a":0,"m":9,"i":[[15,20],[89,100]],"o":[[80,4]],"vp":0},{"n":"Copper Sheet","a":0,"m":0,"i":[[72,20]],"o":[[52,10]],"vp":0},{"n":"Smart Plating","a":0,"m":9,"i":[[79,2],[80,2]],"o":[[81,2]],"vp":0},{"n":"Copper Alloy Ingot","a":1,"m":10,"i":[[8,50],[0,50]],"o":[[72,100]],"vp":0},{"n":"Coke Steel Ingot","a":1,"m":10,"i":[[0,75],[57,75]],"o":[[61,100]],"vp":0},{"n":"Coated Iron Plate","a":1,"m":9,"i":[[13,37.5],[53,7.5]],"o":[[14,75]],"vp":0},{"n":"Coated Iron Canister","a":1,"m":9,"i":[[14,30],[52,15]],"o":[[49,60]],"vp":0},{"n":"Coated Cable","a":1,"m":7,"i":[[41,37.5],[56,15]],"o":[[78,67.5]],"vp":0},{"n":"Bolted Frame","a":1,"m":9,"i":[[79,7.5],[89,140]],"o":[[63,5]],"vp":0},{"n":"Adhered Iron Plate","a":1,"m":9,"i":[[14,11.25],[58,3.75]],"o":[[79,3.75]],"vp":0},{"n":"Turbo Pressure Motor","a":1,"m":8,"i":[[86,7.5],[94,1.875],[95,45],[82,15]],"o":[[96,3.75]],"vp":0},{"n":"Encased Plutonium Cell","a":0,"m":9,"i":[[97,10],[60,20]],"o":[[98,5]],"vp":0},{"n":"Pressure Conversion Cube","a":0,"m":9,"i":[[99,1],[100,2]],"o":[[94,1]],"vp":0},{"n":"Nitric Acid","a":0,"m":2,"i":[[3,120],[2,30],[14,10]],"o":[[20,30]],"vp":0},{"n":"Non-Fissile Uranium","a":0,"m":2,"i":[[101,37.5],[76,25],[20,15],[102,15]],"o":[[103,50],[2,15]],"vp":0},{"n":"Copper Powder","a":0,"m":0,"i":[[72,300]],"o":[[104,50]],"vp":0},{"n":"Plutonium Pellet","a":0,"m":5,"i":[[103,100],[101,25]],"o":[[97,30]],"vp":500},{"n":"Plutonium Fuel Rod","a":0,"m":8,"i":[[98,7.5],[62,4.5],[105,1.5],[106,2.5]],"o":[[107,0.25]],"vp":0},{"n":"Packaged Nitric Acid","a":0,"m":3,"i":[[20,30],[21,30]],"o":[[108,30]],"vp":0},{"n":"Nuclear Pasta","a":0,"m":5,"i":[[104,100],[94,0.5]],"o":[[109,0.5]],"vp":1000},{"n":"Unpackage Nitric Acid","a":0,"m":3,"i":[[108,20]],"o":[[20,20],[21,20]],"vp":0},{"n":"Turbo Blend Fuel","a":1,"m":2,"i":[[16,15],[56,30],[4,22.5],[57,22.5]],"o":[[19,45]],"vp":0},{"n":"Encased Uranium Cell","a":0,"m":2,"i":[[11,50],[60,15],[102,40]],"o":[[110,25],[102,10]],"vp":0},{"n":"Cooling System","a":0,"m":2,"i":[[106,12],[58,12],[2,30],[3,150]],"o":[[111,6]],"vp":0},{"n":"Battery","a":0,"m":2,"i":[[102,50],[75,40],[74,20]],"o":[[112,20],[2,30]],"vp":0},{"n":"Supercomputer","a":0,"m":8,"i":[[91,7.5],[88,3.75],[83,5.625],[53,52.5]],"o":[[33,1.875]],"vp":0},{"n":"Radio Control Unit","a":0,"m":8,"i":[[74,40],[29,1.25],[91,2.5]],"o":[[100,2.5]],"vp":0},{"n":"Sulfuric Acid","a":0,"m":7,"i":[[4,50],[2,50]],"o":[[102,50]],"vp":0},{"n":"Packaged Sulfuric Acid","a":0,"m":3,"i":[[102,40],[49,40]],"o":[[113,40]],"vp":0},{"n":"Assembly Director System","a":0,"m":9,"i":[[93,1.5],[33,0.75]],"o":[[45,0.75]],"vp":0},{"n":"High-Speed Connector","a":0,"m":8,"i":[[87,210],[78,37.5],[54,3.75]],"o":[[83,3.75]],"vp":0},{"n":"Unpackage Sulfuric Acid","a":0,"m":3,"i":[[113,60]],"o":[[102,60],[49,60]],"vp":0},{"n":"Super-State Computer","a":1,"m":8,"i":[[91,7.2],[105,2.4],[112,24],[41,60]],"o":[[33,2.4]],"vp":0},{"n":"Electromagnetic Control Rod","a":0,"m":9,"i":[[82,6],[88,4]],"o":[[105,4]],"vp":0},{"n":"Uranium Fuel Rod","a":0,"m":8,"i":[[110,20],[85,1.2],[105,2]],"o":[[114,0.4]],"vp":0},{"n":"Magnetic Field Generator","a":0,"m":9,"i":[[64,2.5],[105,1]],"o":[[36,1]],"vp":0},{"n":"Sloppy Alumina","a":1,"m":7,"i":[[6,200],[2,200]],"o":[[75,240]],"vp":0},{"n":"Radio Control System","a":1,"m":8,"i":[[29,1.5],[54,15],[74,90],[58,45]],"o":[[100,4.5]],"vp":0},{"n":"Plutonium Fuel Unit","a":1,"m":9,"i":[[98,10],[94,0.5]],"o":[[107,0.5]],"vp":0},{"n":"OC Supercomputer","a":1,"m":9,"i":[[100,6],[111,6]],"o":[[33,3]],"vp":0},{"n":"Heat Sink","a":0,"m":9,"i":[[30,37.5],[52,22.5]],"o":[[106,7.5]],"vp":0},{"n":"Fused Modular Frame","a":0,"m":2,"i":[[90,1.5],[74,75],[3,37.5]],"o":[[99,1.5]],"vp":0},{"n":"Empty Fluid Tank","a":0,"m":0,"i":[[47,60]],"o":[[21,60]],"vp":0},{"n":"Packaged Nitrogen Gas","a":0,"m":3,"i":[[3,240],[21,60]],"o":[[95,60]],"vp":0},{"n":"Unpackage Nitrogen Gas","a":0,"m":3,"i":[[95,60]],"o":[[3,240],[21,60]],"vp":0},{"n":"Instant Scrap","a":1,"m":2,"i":[[6,150],[1,100],[102,50],[2,60]],"o":[[73,300],[2,50]],"vp":0},{"n":"Instant Plutonium Cell","a":1,"m":5,"i":[[103,75],[74,10]],"o":[[98,10]],"vp":500},{"n":"Heat-Fused Frame","a":1,"m":2,"i":[[90,3],[47,150],[20,24],[16,30]],"o":[[99,3]],"vp":0},{"n":"Fertile Uranium","a":1,"m":2,"i":[[11,25],[101,25],[20,15],[102,25]],"o":[[103,100],[2,40]],"vp":0},{"n":"Electric Motor","a":1,"m":9,"i":[[105,3.75],[80,7.5]],"o":[[86,7.5]],"vp":0},{"n":"Diluted Fuel","a":1,"m":2,"i":[[56,50],[2,100]],"o":[[16,100]],"vp":0},{"n":"Cooling Device","a":1,"m":2,"i":[[106,10],[86,2.5],[3,60]],"o":[[111,5]],"vp":0},{"n":"Classic Battery","a":1,"m":8,"i":[[4,45],[30,52.5],[53,60],[41,90]],"o":[[112,30]],"vp":0},{"n":"Automated Miner","a":1,"m":9,"i":[[42,4],[14,4]],"o":[[115,1]],"vp":0},{"n":"Alclad Casing","a":1,"m":9,"i":[[47,150],[72,75]],"o":[[74,112.5]],"vp":0},{"n":"Molded Steel Pipe","a":1,"m":10,"i":[[61,50],[60,30]],"o":[[42,50]],"vp":0},{"n":"Iron Pipe","a":1,"m":0,"i":[[13,100]],"o":[[42,25]],"vp":0},{"n":"Steel Cast Plate","a":1,"m":10,"i":[[13,15],[61,15]],"o":[[14,45]],"vp":0},{"n":"Molded Beam","a":1,"m":10,"i":[[61,120],[60,80]],"o":[[62,45]],"vp":0},{"n":"Aluminum Beam","a":1,"m":0,"i":[[47,22.5]],"o":[[62,22.5]],"vp":0},{"n":"Aluminum Rod","a":1,"m":0,"i":[[47,7.5]],"o":[[15,52.5]],"vp":0},{"n":"Plastic AI Limiter","a":1,"m":9,"i":[[87,120],[53,28]],"o":[[88,8]],"vp":0},{"n":"Distilled Silica","a":1,"m":2,"i":[[116,120],[10,50],[2,100]],"o":[[76,270],[2,80]],"vp":0},{"n":"Quartz Purification","a":1,"m":7,"i":[[9,120],[20,10]],"o":[[59,75],[116,60]],"vp":0},{"n":"Fused Quartz Crystal","a":1,"m":10,"i":[[9,75],[1,36]],"o":[[59,54]],"vp":0},{"n":"Leached Iron ingot","a":1,"m":7,"i":[[0,50],[102,10]],"o":[[13,100]],"vp":0},{"n":"Basic Iron Ingot","a":1,"m":10,"i":[[0,25],[10,40]],"o":[[13,50]],"vp":0},{"n":"Tempered Copper Ingot","a":1,"m":10,"i":[[8,25],[57,40]],"o":[[72,60]],"vp":0},{"n":"Leached Copper Ingot","a":1,"m":7,"i":[[8,45],[102,25]],"o":[[72,110]],"vp":0},{"n":"Tempered Caterium Ingot","a":1,"m":10,"i":[[7,45],[57,15]],"o":[[48,22.5]],"vp":0},{"n":"Leached Caterium Ingot","a":1,"m":7,"i":[[7,54],[102,30]],"o":[[48,36]],"vp":0},{"n":"Caterium Wire","a":1,"m":0,"i":[[48,15]],"o":[[41,120]],"vp":0},{"n":"Iron Wire","a":1,"m":0,"i":[[13,12.5]],"o":[[41,22.5]],"vp":0},{"n":"Infused Uranium Cell","a":1,"m":8,"i":[[11,25],[76,15],[4,25],[87,75]],"o":[[110,20]],"vp":0},{"n":"Caterium Ingot","a":0,"m":1,"i":[[7,45]],"o":[[48,15]],"vp":0},{"n":"Turbo Electric Motor","a":1,"m":8,"i":[[86,6.5625],[100,8.4375],[105,4.6875],[80,6.5625]],"o":[[96,2.8125]],"vp":0},{"n":"Turbo Motor","a":0,"m":8,"i":[[111,7.5],[100,3.75],[86,7.5],[58,45]],"o":[[96,1.875]],"vp":0},{"n":"Thermal Propulsion Rocket","a":0,"m":8,"i":[[92,2.5],[96,1],[111,3],[99,1]],"o":[[117,1]],"vp":0},{"n":"Quickwire Stator","a":1,"m":9,"i":[[42,16],[87,60]],"o":[[82,8]],"vp":0},{"n":"Cheap Silica","a":1,"m":9,"i":[[9,22.5],[10,37.5]],"o":[[76,52.5]],"vp":0},{"n":"Steel Screw","a":1,"m":0,"i":[[62,5]],"o":[[89,260]],"vp":0},{"n":"Cast Screw","a":1,"m":0,"i":[[13,12.5]],"o":[[89,50]],"vp":0},{"n":"Steel Rotor","a":1,"m":9,"i":[[42,10],[41,30]],"o":[[80,5]],"vp":0},{"n":"Encased Industrial Pipe","a":1,"m":9,"i":[[42,24],[60,20]],"o":[[85,4]],"vp":0},{"n":"Stitched Iron Plate","a":1,"m":9,"i":[[14,18.75],[41,37.5]],"o":[[79,5.625]],"vp":0},{"n":"Bolted Iron Plate","a":1,"m":9,"i":[[14,90],[89,250]],"o":[[79,15]],"vp":0},{"n":"Radio Connection Unit","a":1,"m":8,"i":[[106,15],[83,7.5],[59,45]],"o":[[100,3.75]],"vp":0},{"n":"Fused Quickwire","a":1,"m":9,"i":[[48,7.5],[72,37.5]],"o":[[87,90]],"vp":0},{"n":"Recycled Plastic","a":1,"m":7,"i":[[58,30],[16,30]],"o":[[53,60]],"vp":0},{"n":"Uranium Fuel Unit","a":1,"m":8,"i":[[110,20],[105,2],[29,0.6],[80,2]],"o":[[114,0.6]],"vp":0},{"n":"Rigor Motor","a":1,"m":8,"i":[[80,3.75],[82,3.75],[29,1.25]],"o":[[86,7.5]],"vp":0},{"n":"Steeled Frame","a":1,"m":9,"i":[[79,2],[42,10]],"o":[[63,3]],"vp":0},{"n":"Compacted Steel Ingot","a":1,"m":10,"i":[[0,5],[18,2.5]],"o":[[61,10]],"vp":0},{"n":"Solid Steel Ingot","a":1,"m":10,"i":[[13,40],[1,40]],"o":[[61,60]],"vp":0},{"n":"Iron Alloy Ingot","a":1,"m":10,"i":[[0,40],[8,10]],"o":[[13,75]],"vp":0},{"n":"Silicon High-Speed Connector","a":1,"m":8,"i":[[87,90],[76,37.5],[54,3]],"o":[[83,3]],"vp":0},{"n":"Heavy Encased Frame","a":1,"m":8,"i":[[63,7.5],[85,9.375],[42,33.75],[60,20.625]],"o":[[90,2.8125]],"vp":0},{"n":"Heat Exchanger","a":1,"m":9,"i":[[74,30],[58,30]],"o":[[106,10]],"vp":0},{"n":"Fine Black Powder","a":1,"m":9,"i":[[4,7.5],[18,15]],"o":[[118,45]],"vp":0},{"n":"Electromagnetic Connection Rod","a":1,"m":9,"i":[[82,8],[83,4]],"o":[[105,8]],"vp":0},{"n":"Insulated Crystal Oscillator","a":1,"m":8,"i":[[59,18.75],[58,13.125],[88,1.875]],"o":[[29,1.875]],"vp":0},{"n":"Fine Concrete","a":1,"m":9,"i":[[76,15],[10,60]],"o":[[60,50]],"vp":0},{"n":"Crystal Computer","a":1,"m":9,"i":[[54,5],[29,1.666667]],"o":[[91,3.333333]],"vp":0},{"n":"Caterium Computer","a":1,"m":8,"i":[[54,15],[87,52.5],[58,22.5]],"o":[[91,3.75]],"vp":0},{"n":"Caterium Circuit Board","a":1,"m":9,"i":[[53,12.5],[87,37.5]],"o":[[54,8.75]],"vp":0},{"n":"Silicon Circuit Board","a":1,"m":9,"i":[[52,27.5],[76,27.5]],"o":[[54,12.5]],"vp":0},{"n":"Quickwire Cable","a":1,"m":9,"i":[[87,7.5],[58,5]],"o":[[78,27.5]],"vp":0},{"n":"Insulated Cable","a":1,"m":9,"i":[[41,45],[58,30]],"o":[[78,100]],"vp":0},{"n":"Ficsonium","a":0,"m":5,"i":[[119,10],[120,10],[26,200]],"o":[[121,10]],"vp":1000},{"n":"Ficsonium Fuel Rod","a":0,"m":6,"i":[[121,5],[105,5],[34,100],[27,50]],"o":[[122,2.5],[26,50]],"vp":1000},{"n":"Singularity Cell","a":0,"m":8,"i":[[109,1],[23,20],[14,100],[60,200]],"o":[[120,10]],"vp":0},{"n":"Ballistic Warp Drive","a":0,"m":8,"i":[[117,1],[120,5],[31,2],[23,40]],"o":[[123,1]],"vp":1000},{"n":"Iodine-Infused Filter","a":0,"m":8,"i":[[124,3.75],[87,30],[74,3.75]],"o":[[125,3.75]],"vp":0},{"n":"Quickwire","a":0,"m":0,"i":[[48,12]],"o":[[87,60]],"vp":0},{"n":"Solid Biofuel","a":0,"m":0,"i":[[51,120]],"o":[[66,60]],"vp":0},{"n":"Hog Protein","a":0,"m":0,"i":[[126,20]],"o":[[127,20]],"vp":0},{"n":"Spitter Protein","a":0,"m":0,"i":[[128,20]],"o":[[127,20]],"vp":0},{"n":"Biomass (Mycelia)","a":0,"m":0,"i":[[129,15]],"o":[[51,150]],"vp":0},{"n":"Power Shard (1)","a":0,"m":0,"i":[[130,7.5]],"o":[[38,7.5]],"vp":0},{"n":"Black Powder","a":0,"m":9,"i":[[1,15],[4,15]],"o":[[118,30]],"vp":0},{"n":"Alien Power Matrix","a":0,"m":6,"i":[[43,12.5],[38,7.5],[31,7.5],[27,60]],"o":[[131,2.5],[26,60]],"vp":1000},{"n":"Stinger Protein","a":0,"m":0,"i":[[132,20]],"o":[[127,20]],"vp":0},{"n":"Hatcher Protein","a":0,"m":0,"i":[[133,20]],"o":[[127,20]],"vp":0},{"n":"Alien DNA Capsule","a":0,"m":0,"i":[[127,10]],"o":[[134,10]],"vp":0},{"n":"Biomass (Alien Protein)","a":0,"m":0,"i":[[127,15]],"o":[[51,1500]],"vp":0},{"n":"Iron Rebar","a":0,"m":0,"i":[[15,15]],"o":[[135,15]],"vp":0},{"n":"Homing Rifle Ammo","a":0,"m":9,"i":[[136,50],[83,2.5]],"o":[[137,25]],"vp":0},{"n":"Stun Rebar","a":0,"m":9,"i":[[135,10],[87,50]],"o":[[138,10]],"vp":0},{"n":"Gas Filter","a":0,"m":8,"i":[[139,15],[1,30],[14,15]],"o":[[124,7.5]],"vp":0},{"n":"Gas Nobelisk","a":0,"m":9,"i":[[140,5],[51,50]],"o":[[141,5]],"vp":0},{"n":"Polyester Fabric","a":1,"m":7,"i":[[55,30],[2,30]],"o":[[139,30]],"vp":0},{"n":"Fabric","a":0,"m":9,"i":[[129,15],[51,75]],"o":[[139,15]],"vp":0},{"n":"Synthetic Power Shard","a":0,"m":6,"i":[[32,10],[23,10],[59,60],[27,60]],"o":[[38,5],[26,60]],"vp":1000},{"n":"Power Shard (5)","a":0,"m":0,"i":[[142,2.5]],"o":[[38,12.5]],"vp":0},{"n":"Power Shard (2)","a":0,"m":0,"i":[[143,5]],"o":[[38,10]],"vp":0},{"n":"Pulse Nobelisk","a":0,"m":9,"i":[[140,5],[29,1]],"o":[[144,5]],"vp":0},{"n":"Shatter Rebar","a":0,"m":9,"i":[[135,10],[59,15]],"o":[[145,5]],"vp":0},{"n":"Turbo Rifle Ammo","a":0,"m":8,"i":[[136,125],[74,15],[40,15]],"o":[[146,250]],"vp":0},{"n":"Turbo Rifle Ammo","a":0,"m":2,"i":[[136,125],[74,15],[19,15]],"o":[[146,250]],"vp":0},{"n":"Nuke Nobelisk","a":0,"m":8,"i":[[140,2.5],[110,10],[147,5],[88,3]],"o":[[148,0.5]],"vp":0},{"n":"Rifle Ammo","a":0,"m":9,"i":[[52,15],[147,10]],"o":[[136,75]],"vp":0},{"n":"Explosive Rebar","a":0,"m":8,"i":[[135,10],[147,10],[42,10]],"o":[[149,5]],"vp":0},{"n":"Cluster Nobelisk","a":0,"m":9,"i":[[140,7.5],[147,10]],"o":[[150,2.5]],"vp":0},{"n":"Nobelisk","a":0,"m":9,"i":[[118,20],[42,20]],"o":[[140,10]],"vp":0},{"n":"Smokeless Powder","a":0,"m":7,"i":[[118,20],[56,10]],"o":[[147,20]],"vp":0},{"n":"Biomass (Leaves)","a":0,"m":0,"i":[[151,120]],"o":[[51,60]],"vp":0},{"n":"Biomass (Wood)","a":0,"m":0,"i":[[50,60]],"o":[[51,300]],"vp":0},{"n":"Reinforced Iron Plate","a":0,"m":9,"i":[[14,30],[89,60]],"o":[[79,5]],"vp":0},{"n":"Concrete","a":0,"m":0,"i":[[10,45]],"o":[[60,15]],"vp":0},{"n":"Screw","a":0,"m":0,"i":[[15,10]],"o":[[89,40]],"vp":0},{"n":"Cable","a":0,"m":0,"i":[[41,60]],"o":[[78,30]],"vp":0},{"n":"Wire","a":0,"m":0,"i":[[72,15]],"o":[[41,30]],"vp":0},{"n":"Copper Ingot","a":0,"m":1,"i":[[8,30]],"o":[[72,30]],"vp":0}],"ext":{"Desc_OilPump_C":{"j":"原油抽出機","rate":120,"p":40,"x":1.321929,"res":[12]},"Desc_MinerMk2_C":{"j":"採掘機Mk.2","rate":120,"p":15,"x":1.321929,"res":[0,1,4,5,6,7,8,9,10,11]},"Desc_MinerMk3_C":{"j":"採掘機Mk.3","rate":240,"p":45,"x":1.321929,"res":[0,1,4,5,6,7,8,9,10,11]},"Desc_MinerMk1_C":{"j":"採掘機Mk.1","rate":60,"p":5,"x":1.321929,"res":[0,1,4,5,6,7,8,9,10,11]},"Desc_WaterPump_C":{"j":"揚水ポンプ","rate":120,"p":20,"x":1.321929,"res":[2],"noPurity":1}},"resources":[0,1,2,3,4,5,6,7,8,9,10,11,12],"belts":[60,120,270,480,780,1200],"pipes":[300,600]};
+
+// ---------- helpers ----------
+const fmt = v => { const r = Math.round(v*1000)/1000; return r.toLocaleString('ja-JP',{maximumFractionDigits:3}); };
+const itemLabel = i => D.items[i].j === D.items[i].n ? D.items[i].n : D.items[i].j;
+const isRes = i => D.resources.includes(i);
+const EXPO = 1.321929;
+
+const producers = [];
+D.items.forEach((_,i)=>{ producers[i] = D.recipes.map((r,ri)=>({r,ri})).filter(x=>x.r.o.some(o=>o[0]===i)); });
+
+function defaultRecipe(i){
+  if (isRes(i)) return -1;
+  const ps = producers[i];
+  if (!ps.length) return -1;
+  const primary = ps.filter(x=>x.r.o[0][0]===i && !/^Unpackage/.test(x.r.n));
+  let c = primary.find(x=>!x.r.a && x.r.n===D.items[i].n) || primary.find(x=>!x.r.a) || primary[0];
+  return c ? c.ri : ps[0].ri;
+}
+
+// ---------- state ----------
+let S = {
+  mode:'target', tItem:null, tRate:10,
+  rItem:null,
+  nodes:[{res:null, purity:1, miner:'Desc_MinerMk2_C', oc:100, count:1}],
+  pOC:100, byp:true, choice:{}, ocR:{}
+};
+
+function chosen(i){
+  if (S.choice[i] !== undefined) return S.choice[i];
+  return defaultRecipe(i);
+}
+function outRate(r,i){ const o = r.o.find(o=>o[0]===i); return o ? o[1] : 0; }
+function ocOf(ri){ const v = S.ocR[ri]; return (v>=1 && v<=250) ? v : S.pOC; }
+
+// ---------- solver ----------
+function solve(targetItem, targetRate){
+  const n = D.items.length;
+  const x = new Float64Array(n);
+  const ext = new Float64Array(n); ext[targetItem] = targetRate;
+  let converged = false;
+  for (let it=0; it<2000; it++){
+    const demand = new Float64Array(n), byp = new Float64Array(n);
+    for (let i=0;i<n;i++){
+      if (x[i] <= 1e-12) continue;
+      const ri = chosen(i); if (ri < 0) continue;
+      const r = D.recipes[ri];
+      const runs = x[i] / outRate(r,i);
+      r.i.forEach(([j,rt]) => demand[j] += runs*rt);
+      r.o.forEach(([j,rt]) => { if (j!==i) byp[j] += runs*rt; });
+    }
+    let maxd = 0;
+    for (let j=0;j<n;j++){
+      const need = ext[j] + demand[j] - (S.byp ? byp[j] : 0);
+      const ri = chosen(j);
+      const nx = (ri>=0 && !isRes(j)) ? Math.max(0, need) : 0;
+      maxd = Math.max(maxd, Math.abs(nx - x[j]));
+      x[j] = x[j]*0.5 + nx*0.5;
+    }
+    if (maxd < 1e-9){ converged = true; break; }
+  }
+  const demand = new Float64Array(n), byp = new Float64Array(n);
+  const groups = new Map();
+  for (let i=0;i<n;i++){
+    if (x[i] <= 1e-9) continue;
+    const ri = chosen(i); if (ri<0) continue;
+    const r = D.recipes[ri];
+    const runs = x[i] / outRate(r,i);
+    groups.set(ri, (groups.get(ri)||0) + runs);
+    r.i.forEach(([j,rt]) => demand[j] += runs*rt);
+    r.o.forEach(([j,rt]) => { if (j!==i) byp[j] += runs*rt; });
+  }
+  const raw = {}, surplus = {};
+  for (let j=0;j<D.items.length;j++){
+    const need = ext[j] + demand[j];
+    const ri = chosen(j);
+    if ((ri<0 || isRes(j)) && need > 1e-9){
+      const net = need - (S.byp ? Math.min(byp[j], need) : 0);
+      if (net > 1e-9) raw[j] = net;
+    }
+  }
+  for (let j=0;j<D.items.length;j++){
+    if (byp[j] <= 1e-9) continue;
+    const need = ext[j] + demand[j];
+    const used = S.byp ? Math.min(byp[j], Math.max(0, need - x[j])) : 0;
+    const sur = byp[j] - used;
+    if (sur > 1e-9) surplus[j] = sur;
+  }
+  return { x, raw, surplus, groups, demand, converged };
+}
+
+function recipePower(r, clockPct){
+  const m = D.machines[r.m];
+  const base = r.vp || m.p;
+  return base * Math.pow(clockPct/100, m.x||EXPO);
+}
+function groupStats(ri, runs){
+  const r = D.recipes[ri];
+  const clock = ocOf(ri);
+  const oc = clock/100;
+  const exact = runs / oc;
+  const full = Math.floor(exact + 1e-9);
+  const frac = exact - full;
+  const cnt = frac > 1e-6 ? full+1 : full;
+  let power = full * recipePower(r, clock);
+  if (frac > 1e-6) power += recipePower(r, frac * clock);
+  return { exact, cnt, frac, lastClock: frac*clock, power, clock };
+}
+
+function beltStr(rate, liquid){
+  if (liquid){
+    const p = D.pipes.findIndex(c=>c>=rate-1e-9);
+    return p>=0 ? `パイプMk.${p+1}` : `パイプMk.2×${Math.ceil(rate/D.pipes[1])}`;
+  }
+  const b = D.belts.findIndex(c=>c>=rate-1e-9);
+  return b>=0 ? `ベルトMk.${b+1}` : `ベルトMk.6×${Math.ceil(rate/1200)}`;
+}
+
+// ---------- resource nodes ----------
+function extFor(res){ return Object.entries(D.ext).filter(([c,e])=>e.res.includes(res)); }
+function nodeSupply(nd){
+  const e = D.ext[nd.miner];
+  if (!e) return 0;
+  return e.rate * (e.noPurity ? 1 : nd.purity) * (nd.oc/100) * nd.count;
+}
+function addNode(){
+  S.nodes.push({res:D.resources[0], purity:1, miner:'Desc_MinerMk2_C', oc:100, count:1});
+  fixNode(S.nodes.length-1);
+  renderNodes(); autosave(); render();
+}
+function delNode(k){ S.nodes.splice(k,1); renderNodes(); autosave(); render(); }
+function fixNode(k){
+  const nd = S.nodes[k];
+  if (nd.res == null) nd.res = D.resources[0];
+  const opts = extFor(nd.res);
+  if (!opts.some(([c])=>c===nd.miner)) nd.miner = opts[0] ? opts[0][0] : null;
+}
+function updNode(k, f, v){
+  const nd = S.nodes[k];
+  if (f==='res'){ nd.res = +v; fixNode(k); renderNodes(); }
+  else if (f==='purity') nd.purity = parseFloat(v);
+  else if (f==='miner') nd.miner = v;
+  else if (f==='oc') nd.oc = Math.min(250, Math.max(1, parseFloat(v)||100));
+  else if (f==='count') nd.count = Math.max(1, parseInt(v)||1);
+  autosave(); render();
+}
+function renderNodes(){
+  const el = document.getElementById('nodeList');
+  el.innerHTML = S.nodes.map((nd,k)=>{
+    fixNode(k);
+    const e = D.ext[nd.miner] || {};
+    const resOpts = D.resources.map(i=>`<option value="${i}" ${i===nd.res?'selected':''}>${itemLabel(i)}</option>`).join('');
+    const mOpts = extFor(nd.res).map(([c,ex])=>`<option value="${c}" ${c===nd.miner?'selected':''}>${ex.j}</option>`).join('');
+    const pur = e.noPurity
+      ? `<select disabled><option>—</option></select>`
+      : `<select onchange="updNode(${k},'purity',this.value)"><option value="0.5" ${nd.purity===0.5?'selected':''}>低純度</option><option value="1" ${nd.purity===1?'selected':''}>普通</option><option value="2" ${nd.purity===2?'selected':''}>高純度</option></select>`;
+    return `<div class="noderow">
+      <div><span class="nlab">資源</span><select onchange="updNode(${k},'res',this.value)">${resOpts}</select></div>
+      <div><span class="nlab">採掘設備</span><select onchange="updNode(${k},'miner',this.value)">${mOpts}</select></div>
+      <div><span class="nlab">純度</span>${pur}</div>
+      <div><span class="nlab">OC%</span><input type="number" min="1" max="250" value="${nd.oc}" onchange="updNode(${k},'oc',this.value)"></div>
+      <div><span class="nlab">基数</span><input type="number" min="1" value="${nd.count}" onchange="updNode(${k},'count',this.value)"></div>
+      <button class="del" onclick="delNode(${k})" title="削除">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// ---------- rendering ----------
+function recipeSelect(i){
+  const ps = producers[i];
+  if (isRes(i) || !ps.length) return '';
+  const cur = chosen(i);
+  let h = `<select class="rsel" onchange="pickRecipe(${i},this.value)">`;
+  ps.forEach(({r,ri})=>{
+    const mats = r.i.map(([j])=>itemLabel(j)).join('+') || 'なし';
+    const tag = r.a ? '★代替: ' : '';
+    h += `<option value="${ri}" ${ri===cur?'selected':''}>${tag}${r.n} [${D.machines[r.m].j}] ← ${mats}</option>`;
+  });
+  h += `<option value="-1" ${cur===-1?'selected':''}>⛏ 原料として扱う(供給済み)</option></select>`;
+  return h;
+}
+
+function treeNode(i, rate, path, depth){
+  const ri = chosen(i);
+  const name = `<span class="iname" style="display:inline">${itemLabel(i)}</span>`;
+  const rateS = `<span class="sm-rate">${fmt(rate)}/分</span>`;
+  if (path.includes(i)) return `<details class="tn"><summary class="leafy">${name} ${rateS} <span class="cyc">↩ 循環(上位で生産)</span></summary></details>`;
+  if (ri < 0 || isRes(i) || depth > 25){
+    return `<details class="tn"><summary class="leafy">${name} ${rateS} <span class="rawtag">原料</span></summary></details>`;
+  }
+  const r = D.recipes[ri];
+  const runs = rate / outRate(r,i);
+  const g = groupStats(ri, runs);
+  const rc = r.a ? `<span class="sm-rc alt">★${r.n}</span>` : `<span class="sm-rc">${r.n}</span>`;
+  const ocTag = S.ocR[ri] ? `<span class="sm-rc alt">OC${g.clock}%</span>` : '';
+  let h = `<details class="tn" ${depth<4?'open':''}><summary>${name} ${rateS} <span class="sm-mc">${D.machines[r.m].j}×${fmt(g.exact)} (${g.cnt}台)</span> ${rc} ${ocTag} <span class="belt">${beltStr(rate, D.items[i].l)}</span></summary>`;
+  r.i.forEach(([j,rt]) => { h += treeNode(j, runs*rt, [...path,i], depth+1); });
+  h += `</details>`;
+  return h;
+}
+
+function minerEquiv(i, rate){
+  const opts = extFor(i);
+  if (!opts.length) return '';
+  const [c,e] = opts.find(([c])=>c==='Desc_MinerMk2_C') || opts[0];
+  return `<span class="belt">≒ ${e.j}(普通/100%)×${fmt(rate/e.rate)}基</span>`;
+}
+
+function render(){
+  const out = document.getElementById('out');
+  let target, rate, headCards = '', chips = '';
+  if (S.mode === 'target'){
+    target = S.tItem; rate = S.tRate;
+    if (target == null || !(rate > 0)){ out.innerHTML = '<div class="panel err">アイテムと生産数を入力してください。</div>'; return; }
+  } else {
+    target = S.rItem;
+    const supply = {};
+    S.nodes.forEach(nd => { if (nd.res!=null && D.ext[nd.miner]) supply[nd.res] = (supply[nd.res]||0) + nodeSupply(nd); });
+    document.getElementById('rSupply').textContent = '供給量: ' + (Object.keys(supply).length
+      ? Object.keys(supply).map(r=>`${itemLabel(+r)} ${fmt(supply[r])}/分`).join(' ／ ') : 'なし');
+    if (target == null){ out.innerHTML = '<div class="panel err">作りたいアイテムを入力してください。</div>'; return; }
+    if (!Object.keys(supply).length){ out.innerHTML = '<div class="panel err">資源ノードを追加してください。</div>'; return; }
+    const unit = solve(target, 1);
+    if (!unit.converged){ out.innerHTML = '<div class="panel err">計算が収束しません。循環レシピの組み合わせを見直してください。</div>'; return; }
+    let best = Infinity, bneck = null;
+    const usage = [];
+    for (const rs of Object.keys(supply)){
+      const cons = unit.raw[rs] || 0;
+      if (cons <= 1e-12){ usage.push({rs:+rs, sup:supply[rs], cons:0, lim:Infinity}); continue; }
+      const lim = supply[rs] / cons;
+      usage.push({rs:+rs, sup:supply[rs], cons, lim});
+      if (lim < best){ best = lim; bneck = +rs; }
+    }
+    if (!isFinite(best)){
+      out.innerHTML = `<div class="panel err">追加した資源はいずれも「${itemLabel(target)}」の生産に使われません(現在のレシピ構成)。レシピ選択か資源を確認してください。</div>`;
+      return;
+    }
+    rate = best;
+    headCards = `<div class="card"><div class="v">${fmt(rate)}/分</div><div class="t">最大生産可能数 (${itemLabel(target)})</div></div>`;
+    chips = `<div class="panel" style="padding:8px">` + usage.map(u=>{
+      if (!isFinite(u.lim)) return `<span class="chip">${itemLabel(u.rs)}: 未使用 (供給 ${fmt(u.sup)}/分)</span>`;
+      const used = u.cons * rate;
+      const pct = Math.round(used/u.sup*1000)/10;
+      return `<span class="chip ${u.rs===bneck?'bneck':''}">${u.rs===bneck?'⚠ ボトルネック ':''}${itemLabel(u.rs)}: ${fmt(used)}/${fmt(u.sup)} (${pct}%)</span>`;
+    }).join('') + `</div>`;
+  }
+
+  const sol = solve(target, rate);
+  if (!sol.converged){ out.innerHTML = '<div class="panel err">計算が収束しません。循環レシピの組み合わせを見直してください。</div>'; return; }
+
+  let totalMachines = 0, totalPower = 0;
+  const rows = [];
+  [...sol.groups.keys()].forEach(ri => {
+    const runs = sol.groups.get(ri);
+    const r = D.recipes[ri];
+    const g = groupStats(ri, runs);
+    totalMachines += g.cnt; totalPower += g.power;
+    rows.push({ri, r, g, runs, mainOut: r.o[0][0], prodRate: runs * r.o[0][1]});
+  });
+
+  let extPower = 0;
+  if (S.mode === 'resource'){
+    S.nodes.forEach(nd => { const e = D.ext[nd.miner]; if (e) extPower += nd.count * e.p * Math.pow(nd.oc/100, e.x||EXPO); });
+    Object.keys(sol.raw).forEach(j => {
+      j = +j;
+      if (S.nodes.some(nd=>nd.res===j)) return;
+      const opts = extFor(j);
+      if (opts.length){ const e = (opts.find(([c])=>c==='Desc_MinerMk2_C')||opts[0])[1]; extPower += Math.ceil(sol.raw[j]/e.rate - 1e-9) * e.p; }
+    });
+  } else {
+    Object.entries(sol.raw).forEach(([j, rt]) => {
+      const opts = extFor(+j);
+      if (opts.length){ const e = (opts.find(([c])=>c==='Desc_MinerMk2_C')||opts[0])[1]; extPower += Math.ceil(rt/e.rate - 1e-9) * e.p; }
+    });
+  }
+
+  let h = `<div class="cards">${headCards}
+    <div class="card"><div class="v">${totalMachines}</div><div class="t">生産設備 合計台数</div></div>
+    <div class="card"><div class="v">${fmt(totalPower)} MW</div><div class="t">生産設備 消費電力</div></div>
+    <div class="card"><div class="v">${fmt(extPower)} MW</div><div class="t">採掘設備 電力目安</div></div>
+  </div>` + chips;
+
+  h += `<h2>⛏️ 必要な原料</h2><div class="panel"><table><tr><th>原料</th><th style="text-align:right">必要量/分</th><th>搬送</th><th>採掘目安</th></tr>`;
+  const rawKeys = Object.keys(sol.raw).map(Number).sort((a,b)=>sol.raw[b]-sol.raw[a]);
+  if (!rawKeys.length) h += `<tr><td colspan="4" class="belt">なし</td></tr>`;
+  rawKeys.forEach(j => {
+    h += `<tr><td class="iname">${itemLabel(j)}<small>${D.items[j].n}</small></td><td class="num">${fmt(sol.raw[j])}</td><td class="belt">${beltStr(sol.raw[j], D.items[j].l)}</td><td>${minerEquiv(j, sol.raw[j])}</td></tr>`;
+  });
+  h += `</table></div>`;
+
+  h += `<h2>🏭 生産工程 (集計) — レシピと個別OCはここで変更</h2><div class="panel"><table><tr><th>アイテム / レシピ選択</th><th style="text-align:right">生産量/分</th><th>設備 / 個別OC</th><th style="text-align:right">電力</th></tr>`;
+  rows.sort((a,b)=>b.g.power-a.g.power);
+  rows.forEach(({r,g,mainOut,prodRate,ri}) => {
+    const cntS = g.frac>1e-6 ? `${g.cnt}台 <span class="belt">(内1台 ${fmt(g.lastClock)}%)</span>` : `${g.cnt}台`;
+    const ov = S.ocR[ri] ? 'ov' : '';
+    h += `<tr><td><span class="iname">${itemLabel(mainOut)}</span> ${recipeSelect(mainOut)}</td>
+      <td class="num">${fmt(prodRate)}<div class="belt">${beltStr(prodRate, D.items[mainOut].l)}</div></td>
+      <td class="mch">${D.machines[r.m].j}<br>${cntS}<div class="belt">OC <input type="number" class="ocin ${ov}" min="1" max="250" value="${g.clock}" onchange="setOC(${ri},this.value)">%</div></td>
+      <td class="num">${fmt(g.power)} MW</td></tr>`;
+  });
+  h += `</table></div>`;
+
+  const surKeys = Object.keys(sol.surplus).map(Number);
+  if (surKeys.length){
+    h += `<h2>♻️ 副産物・余剰</h2><div class="panel">`;
+    surKeys.forEach(j => h += `<span class="chip byp">${itemLabel(j)}: ${fmt(sol.surplus[j])}/分</span>`);
+    h += `<div class="note">${S.byp?'副産物は可能な限り材料に充当済み。残りは余剰です(シンク等で処理)。':'副産物の充当はオフです。'}</div></div>`;
+  }
+
+  h += `<h2>🌳 リソースチェーン</h2><div class="panel" style="overflow-x:auto">${treeNode(target, rate, [], 0)}
+  <div class="note">▸をタップで展開/折りたたみ。台数は各枝の必要量ベース(共通部品は集計表で合算されます)。</div></div>`;
+
+  out.innerHTML = h;
+}
+
+// ---------- events ----------
+function pickRecipe(i, v){ S.choice[i] = parseInt(v); autosave(); render(); }
+function setOC(ri, v){
+  const n = parseFloat(v);
+  if (!n || n === S.pOC) delete S.ocR[ri]; else S.ocR[ri] = Math.min(250, Math.max(1, n));
+  autosave(); render();
+}
+function setMode(m){
+  S.mode = m;
+  document.getElementById('tabT').classList.toggle('on', m==='target');
+  document.getElementById('tabR').classList.toggle('on', m==='resource');
+  document.getElementById('pnlTarget').style.display = m==='target'?'':'none';
+  document.getElementById('pnlRes').style.display = m==='resource'?'':'none';
+  autosave(); render();
+}
+function findItem(label){
+  if (!label) return null;
+  const t = label.trim().toLowerCase();
+  let i = D.items.findIndex(it => it.j.toLowerCase()===t || it.n.toLowerCase()===t || `${it.j} (${it.n})`.toLowerCase()===t);
+  if (i<0) i = D.items.findIndex(it => it.j.toLowerCase().includes(t) || it.n.toLowerCase().includes(t));
+  return i>=0 ? i : null;
+}
+
+function bind(){
+  const dl = document.getElementById('itemList');
+  const makeable = new Set(); D.recipes.forEach(r=>r.o.forEach(o=>makeable.add(o[0])));
+  [...makeable].sort((a,b)=>itemLabel(a).localeCompare(itemLabel(b),'ja')).forEach(i=>{
+    const o = document.createElement('option');
+    o.value = D.items[i].j === D.items[i].n ? D.items[i].n : `${D.items[i].j} (${D.items[i].n})`;
+    dl.appendChild(o);
+  });
+  document.getElementById('tItem').addEventListener('change', e=>{ S.tItem = findItem(e.target.value); autosave(); render(); });
+  document.getElementById('tRate').addEventListener('input', e=>{ S.tRate = parseFloat(e.target.value)||0; autosave(); render(); });
+  document.getElementById('rItem').addEventListener('change', e=>{ S.rItem = findItem(e.target.value); autosave(); render(); });
+  document.getElementById('pOC').addEventListener('input', e=>{ S.pOC = Math.min(250,Math.max(1,parseFloat(e.target.value)||100)); autosave(); render(); });
+  document.getElementById('bypCredit').addEventListener('change', e=>{ S.byp = e.target.checked; autosave(); render(); });
+}
+
+// ---------- save / share ----------
+const LSK = 'sf-planner';
+function stateStr(){ return JSON.stringify(S); }
+function applyState(o){
+  if (!o.nodes && o.rRes !== undefined){
+    o.nodes = [{res:o.rRes, purity:o.rPurity||1, miner:o.rMiner||'Desc_MinerMk2_C', oc:o.rOC||100, count:o.rCount||1}];
+  }
+  S = Object.assign(S, o);
+  if (!S.ocR) S.ocR = {};
+  if (!Array.isArray(S.nodes) || !S.nodes.length) S.nodes = [{res:D.resources[0], purity:1, miner:'Desc_MinerMk2_C', oc:100, count:1}];
+  document.getElementById('tRate').value = S.tRate;
+  document.getElementById('pOC').value = S.pOC;
+  document.getElementById('bypCredit').checked = S.byp;
+  if (S.tItem!=null) document.getElementById('tItem').value = itemLabel(S.tItem);
+  if (S.rItem!=null) document.getElementById('rItem').value = itemLabel(S.rItem);
+  renderNodes();
+  setMode(S.mode);
+}
+function autosave(){ try{ localStorage.setItem(LSK+'-auto', stateStr()); }catch(e){} }
+function saveDesign(){
+  const name = document.getElementById('saveName').value.trim() || '設計'+new Date().toLocaleString('ja-JP');
+  const all = JSON.parse(localStorage.getItem(LSK+'-saves')||'{}');
+  all[name] = stateStr();
+  localStorage.setItem(LSK+'-saves', JSON.stringify(all));
+  listSaves(); toast('保存しました: '+name);
+}
+function listSaves(){
+  const all = JSON.parse(localStorage.getItem(LSK+'-saves')||'{}');
+  const el = document.getElementById('saveList');
+  el.innerHTML = Object.keys(all).map(n=>
+    `<div class="si"><span>${n}</span><button class="ghost" onclick='loadDesign(${JSON.stringify(n)})'>読込</button><button class="ghost" onclick='delDesign(${JSON.stringify(n)})'>削除</button></div>`).join('');
+}
+function loadDesign(n){
+  const all = JSON.parse(localStorage.getItem(LSK+'-saves')||'{}');
+  if (all[n]){ applyState(JSON.parse(all[n])); toast('読み込みました'); }
+}
+function delDesign(n){
+  const all = JSON.parse(localStorage.getItem(LSK+'-saves')||'{}');
+  delete all[n]; localStorage.setItem(LSK+'-saves', JSON.stringify(all)); listSaves();
+}
+function shareURL(){
+  const u = location.href.split('#')[0] + '#' + encodeURIComponent(btoa(unescape(encodeURIComponent(stateStr()))));
+  (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(()=>toast('URLをコピーしました'),()=>prompt('この URL をコピーしてください', u));
+}
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', 1800); }
+
+// ---------- init ----------
+if (typeof document !== 'undefined' && document.getElementById('out')){
+  bind(); listSaves();
+  let loaded = false;
+  if (location.hash.length > 1){
+    try{ applyState(JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(location.hash.slice(1))))))); loaded = true; }catch(e){}
+  }
+  if (!loaded){
+    try{ const a = localStorage.getItem(LSK+'-auto'); if (a){ applyState(JSON.parse(a)); loaded = true; } }catch(e){}
+  }
+  if (!loaded){
+    S.tItem = D.items.findIndex(it=>it.n==='Modular Frame');
+    S.nodes = [{res:D.resources[0], purity:1, miner:'Desc_MinerMk2_C', oc:100, count:1}];
+    document.getElementById('tItem').value = itemLabel(S.tItem);
+    renderNodes();
+    render();
+  }
+}
+</script>
+</body>
+</html>
