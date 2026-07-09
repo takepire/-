@@ -74,7 +74,7 @@ h2{font-size:14px;color:var(--acc);margin:14px 0 6px}
 </head>
 <body>
 <div class="wrap">
-<h1>Satisfactory 工場プランナー <small>v1.1 (ゲームVer1.0対応 / 全276レシピ)</small></h1>
+<h1>Satisfactory 工場プランナー <small>v1.2 (ゲームVer1.0対応 / 全276レシピ)</small></h1>
 
 <div class="tabs">
   <div class="tab on" id="tabT" onclick="setMode('target')">🎯 目標から逆算</div>
@@ -101,6 +101,7 @@ h2{font-size:14px;color:var(--acc);margin:14px 0 6px}
   <div class="row">
     <div class="fld" style="max-width:170px"><label>生産設備の基本OC % (全体)</label><input id="pOC" type="number" value="100" min="1" max="250"></div>
     <div class="fld" style="max-width:210px"><label><input type="checkbox" id="bypCredit" checked style="width:auto;margin-right:5px">副産物を材料に充当する</label></div>
+    <button class="ghost" onclick="resetAll()" style="align-self:flex-end;padding:8px 14px">🔄 全リセット</button>
   </div>
   <div class="note">※工程ごとの個別OCは下の「生産工程」表で設定できます(<span class="alt">黄色</span>=個別指定中)。電力は クロック^1.321929 でスケール。</div>
 </div>
@@ -180,13 +181,15 @@ function solve(targetItem, targetRate){
     if (maxd < 1e-9){ converged = true; break; }
   }
   const demand = new Float64Array(n), byp = new Float64Array(n);
-  const groups = new Map();
+  const groups = new Map(), drivers = new Map();
   for (let i=0;i<n;i++){
     if (x[i] <= 1e-9) continue;
     const ri = chosen(i); if (ri<0) continue;
     const r = D.recipes[ri];
     const runs = x[i] / outRate(r,i);
     groups.set(ri, (groups.get(ri)||0) + runs);
+    if (!drivers.has(ri)) drivers.set(ri, []);
+    drivers.get(ri).push(i);
     r.i.forEach(([j,rt]) => demand[j] += runs*rt);
     r.o.forEach(([j,rt]) => { if (j!==i) byp[j] += runs*rt; });
   }
@@ -206,7 +209,7 @@ function solve(targetItem, targetRate){
     const sur = byp[j] - used;
     if (sur > 1e-9) surplus[j] = sur;
   }
-  return { x, raw, surplus, groups, demand, converged };
+  return { x, raw, surplus, groups, drivers, demand, converged };
 }
 
 function recipePower(r, clockPct){
@@ -375,7 +378,7 @@ function render(){
     const r = D.recipes[ri];
     const g = groupStats(ri, runs);
     totalMachines += g.cnt; totalPower += g.power;
-    rows.push({ri, r, g, runs, mainOut: r.o[0][0], prodRate: runs * r.o[0][1]});
+    rows.push({ri, r, g, runs, items: (sol.drivers.get(ri)||[r.o[0][0]])});
   });
 
   let extPower = 0;
@@ -404,17 +407,20 @@ function render(){
   const rawKeys = Object.keys(sol.raw).map(Number).sort((a,b)=>sol.raw[b]-sol.raw[a]);
   if (!rawKeys.length) h += `<tr><td colspan="4" class="belt">なし</td></tr>`;
   rawKeys.forEach(j => {
-    h += `<tr><td class="iname">${itemLabel(j)}<small>${D.items[j].n}</small></td><td class="num">${fmt(sol.raw[j])}</td><td class="belt">${beltStr(sol.raw[j], D.items[j].l)}</td><td>${minerEquiv(j, sol.raw[j])}</td></tr>`;
+    const rsel = (!isRes(j) && producers[j].length) ? `<div>${recipeSelect(j)}</div>` : '';
+    h += `<tr><td class="iname">${itemLabel(j)}<small>${D.items[j].n}</small>${rsel}</td><td class="num">${fmt(sol.raw[j])}</td><td class="belt">${beltStr(sol.raw[j], D.items[j].l)}</td><td>${minerEquiv(j, sol.raw[j])}</td></tr>`;
   });
   h += `</table></div>`;
 
   h += `<h2>🏭 生産工程 (集計) — レシピと個別OCはここで変更</h2><div class="panel"><table><tr><th>アイテム / レシピ選択</th><th style="text-align:right">生産量/分</th><th>設備 / 個別OC</th><th style="text-align:right">電力</th></tr>`;
   rows.sort((a,b)=>b.g.power-a.g.power);
-  rows.forEach(({r,g,mainOut,prodRate,ri}) => {
+  rows.forEach(({r,g,items,ri}) => {
     const cntS = g.frac>1e-6 ? `${g.cnt}台 <span class="belt">(内1台 ${fmt(g.lastClock)}%)</span>` : `${g.cnt}台`;
     const ov = S.ocR[ri] ? 'ov' : '';
-    h += `<tr><td><span class="iname">${itemLabel(mainOut)}</span> ${recipeSelect(mainOut)}</td>
-      <td class="num">${fmt(prodRate)}<div class="belt">${beltStr(prodRate, D.items[mainOut].l)}</div></td>
+    const nameCell = items.map(i=>`<span class="iname">${itemLabel(i)}</span> ${recipeSelect(i)}`).join('<div style="height:6px"></div>');
+    const rateCell = items.map(i=>`${fmt(sol.x[i])}<div class="belt">${beltStr(sol.x[i], D.items[i].l)}</div>`).join('');
+    h += `<tr><td>${nameCell}</td>
+      <td class="num">${rateCell}</td>
       <td class="mch">${D.machines[r.m].j}<br>${cntS}<div class="belt">OC <input type="number" class="ocin ${ov}" min="1" max="250" value="${g.clock}" onchange="setOC(${ri},this.value)">%</div></td>
       <td class="num">${fmt(g.power)} MW</td></tr>`;
   });
@@ -439,6 +445,20 @@ function setOC(ri, v){
   const n = parseFloat(v);
   if (!n || n === S.pOC) delete S.ocR[ri]; else S.ocR[ri] = Math.min(250, Math.max(1, n));
   autosave(); render();
+}
+function resetAll(){
+  if (!confirm('すべての入力・レシピ選択・OC設定を初期状態に戻します。よろしいですか?\n(保存済みの設計は消えません)')) return;
+  try{ localStorage.removeItem(LSK+'-auto'); }catch(e){}
+  try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
+  S = { mode:'target', tItem:D.items.findIndex(it=>it.n==='Modular Frame'), tRate:10, rItem:null,
+    nodes:[{res:D.resources[0], purity:1, miner:'Desc_MinerMk2_C', oc:100, count:1}],
+    pOC:100, byp:true, choice:{}, ocR:{} };
+  document.getElementById('tItem').value = itemLabel(S.tItem);
+  document.getElementById('rItem').value = '';
+  document.getElementById('tRate').value = 10;
+  document.getElementById('pOC').value = 100;
+  document.getElementById('bypCredit').checked = true;
+  renderNodes(); setMode('target'); toast('リセットしました');
 }
 function setMode(m){
   S.mode = m;
