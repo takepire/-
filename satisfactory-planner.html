@@ -12,7 +12,7 @@ body{background:var(--bg);color:var(--fg);font-family:"Hiragino Sans","Yu Gothic
 h1{font-size:18px;color:var(--acc);padding:8px 0 2px}
 h1 small{color:var(--dim);font-weight:normal;font-size:11px;margin-left:8px}
 .tabs{display:flex;gap:6px;margin:10px 0}
-.tab{flex:1;padding:10px 4px;text-align:center;background:var(--panel);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;user-select:none}
+.tab{flex:1;padding:10px 2px;text-align:center;background:var(--panel);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12.5px;user-select:none}
 .tab.on{background:var(--acc2);border-color:var(--acc);color:#fff;font-weight:bold}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
@@ -65,8 +65,17 @@ h2{font-size:14px;color:var(--acc);margin:14px 0 6px}
 .chip.bneck{border-color:var(--bad);color:var(--bad)}
 .noderow{display:grid;grid-template-columns:1.2fr 1.4fr .9fr 64px 58px 34px;gap:5px;align-items:end;margin-bottom:6px}
 .noderow select,.noderow input{padding:6px 4px;font-size:12px}
-.noderow .del{background:var(--panel2);border:1px solid var(--border);color:var(--bad);border-radius:6px;padding:6px 0;font-weight:bold}
+.trow{display:grid;grid-template-columns:1fr 100px 34px;gap:5px;align-items:end;margin-bottom:6px}
+.trow input{padding:6px 6px;font-size:12.5px}
+.del{background:var(--panel2);border:1px solid var(--border);color:var(--bad);border-radius:6px;padding:6px 0;font-weight:bold}
 .nlab{font-size:10px;color:var(--dim);display:block;margin-bottom:2px}
+.bal-neg{color:var(--bad);font-weight:bold}
+.bal-pos{color:var(--ok);font-weight:bold}
+.bal-zero{color:var(--dim)}
+details.fac{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:6px}
+details.fac>summary{cursor:pointer;display:flex;gap:8px;align-items:center}
+details.fac>summary .fname{flex:1;font-weight:bold}
+details.fac button{padding:3px 10px;font-size:12px}
 @media(max-width:540px){.noderow{grid-template-columns:1.2fr 1.3fr .9fr 56px 50px 30px}}
 #toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--acc2);color:#fff;padding:8px 18px;border-radius:20px;display:none;z-index:9}
 @media(max-width:480px){body{font-size:13px} td,th{padding:6px 4px}}
@@ -74,22 +83,25 @@ h2{font-size:14px;color:var(--acc);margin:14px 0 6px}
 </head>
 <body>
 <div class="wrap">
-<h1>Satisfactory 工場プランナー <small>v1.2 (ゲームVer1.0対応 / 全276レシピ)</small></h1>
+<h1>Satisfactory 工場プランナー <small>v2.0 (ゲームVer1.0対応 / 全276レシピ)</small></h1>
 
 <div class="tabs">
   <div class="tab on" id="tabT" onclick="setMode('target')">🎯 目標から逆算</div>
   <div class="tab" id="tabR" onclick="setMode('resource')">⛏️ 資源から順算</div>
+  <div class="tab" id="tabL" onclick="setMode('ledger')">📊 全体収支</div>
 </div>
 
 <div class="panel" id="pnlTarget">
-  <div class="row">
-    <div class="fld"><label>作りたいアイテム</label><input id="tItem" list="itemList" placeholder="例: モジュラー・フレーム" autocomplete="off"></div>
-    <div class="fld" style="max-width:120px"><label>目標生産数 /分</label><input id="tRate" type="number" value="10" min="0.1" step="any"></div>
-  </div>
+  <label style="margin-bottom:4px;display:block">作りたいアイテム(複数可・それぞれ生産数/分を指定)</label>
+  <div id="tList"></div>
+  <button class="ghost" onclick="addTarget()" style="font-size:12px;padding:6px 12px">＋ 目標を追加</button>
 </div>
 
 <div class="panel" id="pnlRes" style="display:none">
-  <div class="row"><div class="fld"><label>作りたいアイテム(制約内で最大生産)</label><input id="rItem" list="itemList" placeholder="例: モジュラー・フレーム" autocomplete="off"></div></div>
+  <label style="margin-bottom:4px;display:block">作りたいアイテム(複数可・<b>比率</b>を指定→資源の範囲で比率を保って最大化)</label>
+  <div id="rtList"></div>
+  <button class="ghost" onclick="addRTarget()" style="font-size:12px;padding:6px 12px">＋ 製品を追加</button>
+  <div class="note" style="margin-bottom:8px">例: プラスチック比率2・ゴム比率1 → 常に2:1の割合で最大生産量を計算</div>
   <label style="margin-bottom:4px;display:block">使用する資源ノード(複数可・合計供給量が制約になります)</label>
   <div id="nodeList"></div>
   <button class="ghost" onclick="addNode()" style="font-size:12px;padding:6px 12px">＋ 資源ノードを追加</button>
@@ -97,7 +109,7 @@ h2{font-size:14px;color:var(--acc);margin:14px 0 6px}
   <div class="note">※ここに追加した資源だけが制約になります。追加していない資源は無制限として扱います。</div>
 </div>
 
-<div class="panel">
+<div class="panel" id="pnlSet">
   <div class="row">
     <div class="fld" style="max-width:170px"><label>生産設備の基本OC % (全体)</label><input id="pOC" type="number" value="100" min="1" max="250"></div>
     <div class="fld" style="max-width:210px"><label><input type="checkbox" id="bypCredit" checked style="width:auto;margin-right:5px">副産物を材料に充当する</label></div>
@@ -108,10 +120,35 @@ h2{font-size:14px;color:var(--acc);margin:14px 0 6px}
 
 <div id="out"></div>
 
+<div id="pnlLedger" style="display:none">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between">
+      <b style="color:var(--acc)">登録済みの工場</b>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="ghost" onclick="feOpen()" style="font-size:12px;padding:6px 10px">＋ 手入力で追加</button>
+        <button class="ghost" onclick="exportFactories()" style="font-size:12px;padding:6px 10px">書き出し</button>
+        <button class="ghost" onclick="importFactories()" style="font-size:12px;padding:6px 10px">読込</button>
+      </div>
+    </div>
+    <div id="facList" style="margin-top:8px"></div>
+    <div class="panel" id="facEdit" style="display:none;background:var(--panel2);margin-top:8px">
+      <div class="row"><div class="fld"><label>工場名</label><input id="feName" placeholder="例: 北部プラスチック工場"></div></div>
+      <div class="note" style="margin-bottom:6px">数量は/分。<b>プラス=生産(出力)、マイナス=消費(入力)</b>で入力してください。</div>
+      <div id="feRows"></div>
+      <div class="row"><button class="ghost" onclick="feAdd()" style="font-size:12px;padding:6px 10px">＋ 行を追加</button><button onclick="feSave()" style="padding:6px 14px">保存</button><button class="ghost" onclick="feClose()" style="font-size:12px;padding:6px 10px">キャンセル</button></div>
+    </div>
+  </div>
+  <h2>📊 全体リソース収支</h2>
+  <div class="panel" id="balance"></div>
+  <div class="note">シミュレーション結果の「📊 この構成を全体収支に登録」ボタンからも工場を追加できます。中間素材を含む全品目を集計しています(工場内で作って使い切る素材は収支±0で表示)。</div>
+</div>
+
+<div id="secSave">
 <h2>💾 設計の保存・共有</h2>
 <div class="panel">
   <div class="savebar"><input id="saveName" placeholder="設計名"><button onclick="saveDesign()">保存</button><button class="ghost" onclick="shareURL()">共有URLコピー</button></div>
   <div class="slist" id="saveList"></div>
+</div>
 </div>
 <div class="note">データ出典: Satisfactory 1.0 (greeny/SatisfactoryTools)。数値は毎分換算。</div>
 </div>
@@ -125,6 +162,7 @@ const D = {"items":[{"n":"Iron Ore","j":"鉄鉱石","l":false,"e":0},{"n":"Coal"
 const fmt = v => { const r = Math.round(v*1000)/1000; return r.toLocaleString('ja-JP',{maximumFractionDigits:3}); };
 const itemLabel = i => D.items[i].j === D.items[i].n ? D.items[i].n : D.items[i].j;
 const isRes = i => D.resources.includes(i);
+const esc = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const EXPO = 1.321929;
 
 const producers = [];
@@ -141,11 +179,13 @@ function defaultRecipe(i){
 
 // ---------- state ----------
 let S = {
-  mode:'target', tItem:null, tRate:10,
-  rItem:null,
+  mode:'target',
+  targets:[{i:null, rate:10}],
+  rTargets:[{i:null, w:1}],
   nodes:[{res:null, purity:1, miner:'Desc_MinerMk2_C', oc:100, count:1}],
   pOC:100, byp:true, choice:{}, ocR:{}
 };
+let LAST = null; // last solved result for factory registration
 
 function chosen(i){
   if (S.choice[i] !== undefined) return S.choice[i];
@@ -155,10 +195,11 @@ function outRate(r,i){ const o = r.o.find(o=>o[0]===i); return o ? o[1] : 0; }
 function ocOf(ri){ const v = S.ocR[ri]; return (v>=1 && v<=250) ? v : S.pOC; }
 
 // ---------- solver ----------
-function solve(targetItem, targetRate){
+function solve(extObj){
   const n = D.items.length;
   const x = new Float64Array(n);
-  const ext = new Float64Array(n); ext[targetItem] = targetRate;
+  const ext = new Float64Array(n);
+  for (const k in extObj) ext[+k] += extObj[k];
   let converged = false;
   for (let it=0; it<2000; it++){
     const demand = new Float64Array(n), byp = new Float64Array(n);
@@ -209,7 +250,7 @@ function solve(targetItem, targetRate){
     const sur = byp[j] - used;
     if (sur > 1e-9) surplus[j] = sur;
   }
-  return { x, raw, surplus, groups, drivers, demand, converged };
+  return { x, raw, surplus, groups, drivers, demand, byp, converged };
 }
 
 function recipePower(r, clockPct){
@@ -238,6 +279,33 @@ function beltStr(rate, liquid){
   const b = D.belts.findIndex(c=>c>=rate-1e-9);
   return b>=0 ? `ベルトMk.${b+1}` : `ベルトMk.6×${Math.ceil(rate/1200)}`;
 }
+
+// ---------- production targets (multi) ----------
+function renderTargets(){
+  const el = document.getElementById('tList');
+  el.innerHTML = S.targets.map((t,k)=>`<div class="trow">
+    <div><span class="nlab">アイテム</span><input list="itemList" value="${t.i!=null?esc(itemLabel(t.i)):''}" placeholder="例: モジュラー・フレーム" autocomplete="off" onchange="updTarget(${k},this.value)"></div>
+    <div><span class="nlab">生産数/分</span><input type="number" min="0.1" step="any" value="${t.rate}" onchange="updTargetRate(${k},this.value)"></div>
+    <button class="del" onclick="delTarget(${k})" title="削除">✕</button>
+  </div>`).join('');
+}
+function addTarget(){ S.targets.push({i:null, rate:10}); renderTargets(); autosave(); }
+function delTarget(k){ S.targets.splice(k,1); if(!S.targets.length) S.targets=[{i:null,rate:10}]; renderTargets(); autosave(); render(); }
+function updTarget(k,v){ S.targets[k].i = findItem(v); renderTargets(); autosave(); render(); }
+function updTargetRate(k,v){ S.targets[k].rate = parseFloat(v)||0; autosave(); render(); }
+
+function renderRTargets(){
+  const el = document.getElementById('rtList');
+  el.innerHTML = S.rTargets.map((t,k)=>`<div class="trow">
+    <div><span class="nlab">アイテム</span><input list="itemList" value="${t.i!=null?esc(itemLabel(t.i)):''}" placeholder="例: プラスチック" autocomplete="off" onchange="updRTarget(${k},this.value)"></div>
+    <div><span class="nlab">比率</span><input type="number" min="0.01" step="any" value="${t.w}" onchange="updRTargetW(${k},this.value)"></div>
+    <button class="del" onclick="delRTarget(${k})" title="削除">✕</button>
+  </div>`).join('');
+}
+function addRTarget(){ S.rTargets.push({i:null, w:1}); renderRTargets(); autosave(); }
+function delRTarget(k){ S.rTargets.splice(k,1); if(!S.rTargets.length) S.rTargets=[{i:null,w:1}]; renderRTargets(); autosave(); render(); }
+function updRTarget(k,v){ S.rTargets[k].i = findItem(v); renderRTargets(); autosave(); render(); }
+function updRTargetW(k,v){ S.rTargets[k].w = parseFloat(v)||0; autosave(); render(); }
 
 // ---------- resource nodes ----------
 function extFor(res){ return Object.entries(D.ext).filter(([c,e])=>e.res.includes(res)); }
@@ -331,19 +399,22 @@ function minerEquiv(i, rate){
 
 function render(){
   const out = document.getElementById('out');
-  let target, rate, headCards = '', chips = '';
+  if (S.mode === 'ledger'){ return; }
+  let tgts, headCards = '', chips = '';
   if (S.mode === 'target'){
-    target = S.tItem; rate = S.tRate;
-    if (target == null || !(rate > 0)){ out.innerHTML = '<div class="panel err">アイテムと生産数を入力してください。</div>'; return; }
+    tgts = S.targets.filter(t=>t.i!=null && t.rate>0).map(t=>({i:t.i, rate:t.rate}));
+    if (!tgts.length){ out.innerHTML = '<div class="panel err">アイテムと生産数を入力してください。</div>'; return; }
   } else {
-    target = S.rItem;
+    const rt = S.rTargets.filter(t=>t.i!=null && t.w>0);
     const supply = {};
     S.nodes.forEach(nd => { if (nd.res!=null && D.ext[nd.miner]) supply[nd.res] = (supply[nd.res]||0) + nodeSupply(nd); });
     document.getElementById('rSupply').textContent = '供給量: ' + (Object.keys(supply).length
       ? Object.keys(supply).map(r=>`${itemLabel(+r)} ${fmt(supply[r])}/分`).join(' ／ ') : 'なし');
-    if (target == null){ out.innerHTML = '<div class="panel err">作りたいアイテムを入力してください。</div>'; return; }
+    if (!rt.length){ out.innerHTML = '<div class="panel err">作りたいアイテムを入力してください。</div>'; return; }
     if (!Object.keys(supply).length){ out.innerHTML = '<div class="panel err">資源ノードを追加してください。</div>'; return; }
-    const unit = solve(target, 1);
+    const unitExt = {};
+    rt.forEach(t=>{ unitExt[t.i] = (unitExt[t.i]||0) + t.w; });
+    const unit = solve(unitExt);
     if (!unit.converged){ out.innerHTML = '<div class="panel err">計算が収束しません。循環レシピの組み合わせを見直してください。</div>'; return; }
     let best = Infinity, bneck = null;
     const usage = [];
@@ -355,21 +426,24 @@ function render(){
       if (lim < best){ best = lim; bneck = +rs; }
     }
     if (!isFinite(best)){
-      out.innerHTML = `<div class="panel err">追加した資源はいずれも「${itemLabel(target)}」の生産に使われません(現在のレシピ構成)。レシピ選択か資源を確認してください。</div>`;
+      out.innerHTML = `<div class="panel err">追加した資源はいずれの製品の生産にも使われません(現在のレシピ構成)。レシピ選択か資源を確認してください。</div>`;
       return;
     }
-    rate = best;
-    headCards = `<div class="card"><div class="v">${fmt(rate)}/分</div><div class="t">最大生産可能数 (${itemLabel(target)})</div></div>`;
+    tgts = rt.map(t=>({i:t.i, rate:t.w*best}));
+    headCards = tgts.map(t=>`<div class="card"><div class="v">${fmt(t.rate)}/分</div><div class="t">最大生産 (${itemLabel(t.i)})</div></div>`).join('');
     chips = `<div class="panel" style="padding:8px">` + usage.map(u=>{
       if (!isFinite(u.lim)) return `<span class="chip">${itemLabel(u.rs)}: 未使用 (供給 ${fmt(u.sup)}/分)</span>`;
-      const used = u.cons * rate;
+      const used = u.cons * best;
       const pct = Math.round(used/u.sup*1000)/10;
       return `<span class="chip ${u.rs===bneck?'bneck':''}">${u.rs===bneck?'⚠ ボトルネック ':''}${itemLabel(u.rs)}: ${fmt(used)}/${fmt(u.sup)} (${pct}%)</span>`;
     }).join('') + `</div>`;
   }
 
-  const sol = solve(target, rate);
+  const ext = {};
+  tgts.forEach(t=>{ ext[t.i] = (ext[t.i]||0) + t.rate; });
+  const sol = solve(ext);
   if (!sol.converged){ out.innerHTML = '<div class="panel err">計算が収束しません。循環レシピの組み合わせを見直してください。</div>'; return; }
+  LAST = { sol, tgts };
 
   let totalMachines = 0, totalPower = 0;
   const rows = [];
@@ -403,6 +477,8 @@ function render(){
     <div class="card"><div class="v">${fmt(extPower)} MW</div><div class="t">採掘設備 電力目安</div></div>
   </div>` + chips;
 
+  h += `<div style="text-align:right;margin-bottom:10px"><button onclick="registerFactory()" style="font-size:12.5px;padding:7px 14px">📊 この構成を全体収支に登録</button></div>`;
+
   h += `<h2>⛏️ 必要な原料</h2><div class="panel"><table><tr><th>原料</th><th style="text-align:right">必要量/分</th><th>搬送</th><th>採掘目安</th></tr>`;
   const rawKeys = Object.keys(sol.raw).map(Number).sort((a,b)=>sol.raw[b]-sol.raw[a]);
   if (!rawKeys.length) h += `<tr><td colspan="4" class="belt">なし</td></tr>`;
@@ -433,10 +509,122 @@ function render(){
     h += `<div class="note">${S.byp?'副産物は可能な限り材料に充当済み。残りは余剰です(シンク等で処理)。':'副産物の充当はオフです。'}</div></div>`;
   }
 
-  h += `<h2>🌳 リソースチェーン</h2><div class="panel" style="overflow-x:auto">${treeNode(target, rate, [], 0)}
+  h += `<h2>🌳 リソースチェーン</h2><div class="panel" style="overflow-x:auto">${tgts.map(t=>treeNode(t.i, t.rate, [], 0)).join('')}
   <div class="note">▸をタップで展開/折りたたみ。台数は各枝の必要量ベース(共通部品は集計表で合算されます)。</div></div>`;
 
   out.innerHTML = h;
+}
+
+// ---------- ledger (全体収支) ----------
+const FKEY = 'sf-planner-factories';
+function factories(){ try{ return JSON.parse(localStorage.getItem(FKEY)||'[]'); }catch(e){ return []; } }
+function saveFactories(a){ try{ localStorage.setItem(FKEY, JSON.stringify(a)); }catch(e){} }
+
+function registerFactory(){
+  if (!LAST){ toast('先に計算結果を表示してください'); return; }
+  const name = prompt('工場名を入力してください', '工場' + (factories().length+1));
+  if (!name) return;
+  const flows = {};
+  const {sol} = LAST;
+  for (let i=0;i<D.items.length;i++){
+    const p = (sol.x[i]||0) + (sol.byp[i]||0);
+    const c = sol.demand[i]||0;
+    if (p>1e-6 || c>1e-6) flows[i] = [Math.round(p*1000)/1000, Math.round(c*1000)/1000];
+  }
+  const a = factories(); a.push({name, flows}); saveFactories(a);
+  toast('全体収支に登録しました: ' + name);
+}
+function delFactory(k){
+  const a = factories();
+  if (!confirm(`「${a[k].name}」を削除しますか?`)) return;
+  a.splice(k,1); saveFactories(a); renderLedger();
+}
+function flowTable(flows){
+  const keys = Object.keys(flows).map(Number);
+  keys.sort((x,y)=>(flows[x][0]-flows[x][1])-(flows[y][0]-flows[y][1]));
+  let h = `<table style="margin-top:6px"><tr><th>アイテム</th><th style="text-align:right">生産/分</th><th style="text-align:right">消費/分</th><th style="text-align:right">収支/分</th></tr>`;
+  keys.forEach(i=>{
+    const [p,c] = flows[i]; const net = p-c;
+    const cls = net>1e-6?'bal-pos':(net<-1e-6?'bal-neg':'bal-zero');
+    h += `<tr><td>${itemLabel(i)}</td><td class="num">${fmt(p)}</td><td class="num">${fmt(c)}</td><td class="num ${cls}">${net>1e-6?'+':''}${fmt(net)}</td></tr>`;
+  });
+  return h + `</table>`;
+}
+function renderLedger(){
+  const a = factories();
+  document.getElementById('facList').innerHTML = a.length ? a.map((f,k)=>
+    `<details class="fac"><summary><span class="fname">${esc(f.name)}</span><span class="belt">${Object.keys(f.flows).length}品目</span><button class="ghost" onclick="event.preventDefault();event.stopPropagation();delFactory(${k})">削除</button></summary>${flowTable(f.flows)}</details>`
+  ).join('') : '<div class="note">工場が未登録です。シミュレーション結果の「📊 この構成を全体収支に登録」か、「＋手入力で追加」から登録してください。</div>';
+
+  const agg = {};
+  a.forEach(f=>Object.entries(f.flows).forEach(([i,[p,c]])=>{ const g = agg[i]||(agg[i]={p:0,c:0}); g.p+=p; g.c+=c; }));
+  const keys = Object.keys(agg).map(Number);
+  if (!keys.length){ document.getElementById('balance').innerHTML = '<div class="note">工場を登録すると、全アイテムの生産・消費・収支がここに一覧表示されます。</div>'; return; }
+  keys.sort((x,y)=>{
+    const nx = agg[x].p-agg[x].c, ny = agg[y].p-agg[y].c;
+    if (Math.abs(nx-ny) > 1e-9) return nx-ny;
+    return (agg[y].p+agg[y].c)-(agg[x].p+agg[x].c);
+  });
+  let neg=0, pos=0;
+  keys.forEach(i=>{ const n=agg[i].p-agg[i].c; if(n<-1e-6) neg++; else if(n>1e-6) pos++; });
+  let h = `<div style="margin-bottom:6px"><span class="chip bneck">不足 ${neg}品目</span><span class="chip" style="border-color:var(--ok);color:var(--ok)">余剰 ${pos}品目</span><span class="chip">登録工場 ${a.length}件</span></div>`;
+  h += `<table><tr><th>アイテム</th><th style="text-align:right">生産計/分</th><th style="text-align:right">消費計/分</th><th style="text-align:right">収支/分</th></tr>`;
+  keys.forEach(i=>{
+    const {p,c} = agg[i]; const net = p-c;
+    const cls = net>1e-6?'bal-pos':(net<-1e-6?'bal-neg':'bal-zero');
+    h += `<tr><td class="iname">${itemLabel(i)}<small>${D.items[i].n}</small></td><td class="num">${fmt(p)}</td><td class="num">${fmt(c)}</td><td class="num ${cls}">${net>1e-6?'+':''}${fmt(net)}</td></tr>`;
+  });
+  document.getElementById('balance').innerHTML = h + `</table><div class="note">マイナス(赤)=全体で不足している品目、プラス(緑)=余っている品目。</div>`;
+}
+
+// manual factory editor
+let FE = null;
+function feOpen(){
+  FE = { rows:[{i:null, rate:60},{i:null, rate:-30}] };
+  document.getElementById('feName').value = '';
+  feRender();
+  document.getElementById('facEdit').style.display = '';
+}
+function feClose(){ document.getElementById('facEdit').style.display = 'none'; }
+function feRender(){
+  document.getElementById('feRows').innerHTML = FE.rows.map((r,k)=>`<div class="trow">
+    <div><span class="nlab">アイテム</span><input list="itemList" value="${r.i!=null?esc(itemLabel(r.i)):''}" autocomplete="off" onchange="feUpd(${k},this.value)"></div>
+    <div><span class="nlab">数量/分 (+生産/−消費)</span><input type="number" step="any" value="${r.rate}" onchange="feRate(${k},this.value)"></div>
+    <button class="del" onclick="feDel(${k})">✕</button>
+  </div>`).join('');
+}
+function feUpd(k,v){ FE.rows[k].i = findItem(v); feRender(); }
+function feRate(k,v){ FE.rows[k].rate = parseFloat(v)||0; }
+function feAdd(){ FE.rows.push({i:null, rate:0}); feRender(); }
+function feDel(k){ FE.rows.splice(k,1); feRender(); }
+function feSave(){
+  const name = document.getElementById('feName').value.trim() || '手入力工場';
+  const flows = {};
+  FE.rows.forEach(r=>{
+    if (r.i==null || !r.rate) return;
+    const g = flows[r.i] || (flows[r.i]=[0,0]);
+    if (r.rate>0) g[0]+=r.rate; else g[1]+=-r.rate;
+  });
+  if (!Object.keys(flows).length){ toast('品目と数量を入力してください'); return; }
+  const a = factories(); a.push({name, flows}); saveFactories(a);
+  feClose(); renderLedger(); toast('追加しました: '+name);
+}
+
+function exportFactories(){
+  const s = JSON.stringify(factories());
+  (navigator.clipboard ? navigator.clipboard.writeText(s) : Promise.reject())
+    .then(()=>toast('工場データをコピーしました(メモ等に貼り付けて保管)'),
+          ()=>prompt('このテキストをコピーしてください', s));
+}
+function importFactories(){
+  const s = prompt('書き出した工場データ(テキスト)を貼り付けてください');
+  if (!s) return;
+  try{
+    const a = JSON.parse(s);
+    if (!Array.isArray(a) || a.some(f=>!f.flows)) throw 0;
+    saveFactories(factories().concat(a));
+    renderLedger(); toast(a.length + '件の工場を追加しました');
+  }catch(e){ alert('読み込めませんでした。テキストが正しいか確認してください。'); }
 }
 
 // ---------- events ----------
@@ -447,26 +635,31 @@ function setOC(ri, v){
   autosave(); render();
 }
 function resetAll(){
-  if (!confirm('すべての入力・レシピ選択・OC設定を初期状態に戻します。よろしいですか?\n(保存済みの設計は消えません)')) return;
+  if (!confirm('すべての入力・レシピ選択・OC設定を初期状態に戻します。よろしいですか?\n(保存済みの設計・登録済みの工場は消えません)')) return;
   try{ localStorage.removeItem(LSK+'-auto'); }catch(e){}
   try{ history.replaceState(null, '', location.pathname + location.search); }catch(e){}
-  S = { mode:'target', tItem:D.items.findIndex(it=>it.n==='Modular Frame'), tRate:10, rItem:null,
+  S = { mode:'target',
+    targets:[{i:D.items.findIndex(it=>it.n==='Modular Frame'), rate:10}],
+    rTargets:[{i:null, w:1}],
     nodes:[{res:D.resources[0], purity:1, miner:'Desc_MinerMk2_C', oc:100, count:1}],
     pOC:100, byp:true, choice:{}, ocR:{} };
-  document.getElementById('tItem').value = itemLabel(S.tItem);
-  document.getElementById('rItem').value = '';
-  document.getElementById('tRate').value = 10;
   document.getElementById('pOC').value = 100;
   document.getElementById('bypCredit').checked = true;
-  renderNodes(); setMode('target'); toast('リセットしました');
+  renderTargets(); renderRTargets(); renderNodes(); setMode('target'); toast('リセットしました');
 }
 function setMode(m){
   S.mode = m;
   document.getElementById('tabT').classList.toggle('on', m==='target');
   document.getElementById('tabR').classList.toggle('on', m==='resource');
+  document.getElementById('tabL').classList.toggle('on', m==='ledger');
   document.getElementById('pnlTarget').style.display = m==='target'?'':'none';
   document.getElementById('pnlRes').style.display = m==='resource'?'':'none';
-  autosave(); render();
+  document.getElementById('pnlLedger').style.display = m==='ledger'?'':'none';
+  document.getElementById('pnlSet').style.display = m==='ledger'?'none':'';
+  document.getElementById('out').style.display = m==='ledger'?'none':'';
+  document.getElementById('secSave').style.display = m==='ledger'?'none':'';
+  autosave();
+  if (m==='ledger') renderLedger(); else render();
 }
 function findItem(label){
   if (!label) return null;
@@ -484,9 +677,6 @@ function bind(){
     o.value = D.items[i].j === D.items[i].n ? D.items[i].n : `${D.items[i].j} (${D.items[i].n})`;
     dl.appendChild(o);
   });
-  document.getElementById('tItem').addEventListener('change', e=>{ S.tItem = findItem(e.target.value); autosave(); render(); });
-  document.getElementById('tRate').addEventListener('input', e=>{ S.tRate = parseFloat(e.target.value)||0; autosave(); render(); });
-  document.getElementById('rItem').addEventListener('change', e=>{ S.rItem = findItem(e.target.value); autosave(); render(); });
   document.getElementById('pOC').addEventListener('input', e=>{ S.pOC = Math.min(250,Math.max(1,parseFloat(e.target.value)||100)); autosave(); render(); });
   document.getElementById('bypCredit').addEventListener('change', e=>{ S.byp = e.target.checked; autosave(); render(); });
 }
@@ -498,15 +688,16 @@ function applyState(o){
   if (!o.nodes && o.rRes !== undefined){
     o.nodes = [{res:o.rRes, purity:o.rPurity||1, miner:o.rMiner||'Desc_MinerMk2_C', oc:o.rOC||100, count:o.rCount||1}];
   }
+  if (!o.targets && o.tItem !== undefined) o.targets = [{i:o.tItem, rate:o.tRate||10}];
+  if (!o.rTargets && o.rItem !== undefined && o.rItem !== null) o.rTargets = [{i:o.rItem, w:1}];
   S = Object.assign(S, o);
   if (!S.ocR) S.ocR = {};
+  if (!Array.isArray(S.targets) || !S.targets.length) S.targets = [{i:null, rate:10}];
+  if (!Array.isArray(S.rTargets) || !S.rTargets.length) S.rTargets = [{i:null, w:1}];
   if (!Array.isArray(S.nodes) || !S.nodes.length) S.nodes = [{res:D.resources[0], purity:1, miner:'Desc_MinerMk2_C', oc:100, count:1}];
-  document.getElementById('tRate').value = S.tRate;
   document.getElementById('pOC').value = S.pOC;
   document.getElementById('bypCredit').checked = S.byp;
-  if (S.tItem!=null) document.getElementById('tItem').value = itemLabel(S.tItem);
-  if (S.rItem!=null) document.getElementById('rItem').value = itemLabel(S.rItem);
-  renderNodes();
+  renderTargets(); renderRTargets(); renderNodes();
   setMode(S.mode);
 }
 function autosave(){ try{ localStorage.setItem(LSK+'-auto', stateStr()); }catch(e){} }
@@ -521,7 +712,7 @@ function listSaves(){
   const all = JSON.parse(localStorage.getItem(LSK+'-saves')||'{}');
   const el = document.getElementById('saveList');
   el.innerHTML = Object.keys(all).map(n=>
-    `<div class="si"><span>${n}</span><button class="ghost" onclick='loadDesign(${JSON.stringify(n)})'>読込</button><button class="ghost" onclick='delDesign(${JSON.stringify(n)})'>削除</button></div>`).join('');
+    `<div class="si"><span>${esc(n)}</span><button class="ghost" onclick='loadDesign(${JSON.stringify(n)})'>読込</button><button class="ghost" onclick='delDesign(${JSON.stringify(n)})'>削除</button></div>`).join('');
 }
 function loadDesign(n){
   const all = JSON.parse(localStorage.getItem(LSK+'-saves')||'{}');
@@ -548,13 +739,12 @@ if (typeof document !== 'undefined' && document.getElementById('out')){
     try{ const a = localStorage.getItem(LSK+'-auto'); if (a){ applyState(JSON.parse(a)); loaded = true; } }catch(e){}
   }
   if (!loaded){
-    S.tItem = D.items.findIndex(it=>it.n==='Modular Frame');
-    S.nodes = [{res:D.resources[0], purity:1, miner:'Desc_MinerMk2_C', oc:100, count:1}];
-    document.getElementById('tItem').value = itemLabel(S.tItem);
-    renderNodes();
+    S.targets = [{i:D.items.findIndex(it=>it.n==='Modular Frame'), rate:10}];
+    renderTargets(); renderRTargets(); renderNodes();
     render();
   }
 }
 </script>
 </body>
 </html>
+<!--EOF-->
